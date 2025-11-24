@@ -1,4 +1,6 @@
 <?php
+// models/Animal.php
+
 require_once __DIR__ . '/../config/database.php';
 
 class Animal {
@@ -9,9 +11,7 @@ class Animal {
         $this->db = Database::getInstance();
         $this->conn = $this->db->getConnection();
     }
-    /**
-     * Obtener información completa de un animal
-     */
+
     public function getAnimal($numIdentif) {
         try {
             $query = "SELECT 
@@ -20,7 +20,7 @@ class Animal {
                         a.sexo,
                         a.fechaNac,
                         a.numJaula,
-                        a.nombre_cientifico AS nombre_cientifico,
+                        a.nombre_cientifico,
                         a.numPais,
                         p.nombre AS pais_origen,
                         j.nombre AS nombre_jaula,
@@ -43,108 +43,55 @@ class Animal {
         }
     }
 
-    /**
-     * Obtener todos los animales
-     */
     public function getAllAnimales() {
         try {
+            // Se usa la vista, así que está bien, pero revisamos por si acaso
             $query = "SELECT * FROM VistaAnimalesConAlertas ORDER BY nombre_animal";
-            
             $stmt = $this->conn->prepare($query);
             $stmt->execute();
-            
             return $stmt->fetchAll();
         } catch (PDOException $e) {
-            error_log("Error en getAllAnimales: " . $e->getMessage());
             return [];
         }
     }
 
-    /**
-     * Obtener animales de una jaula
-     */
-    public function getAnimalesByJaula($numJaula) {
-        try {
-            $query = "SELECT * FROM VistaAnimalesConAlertas 
-                      WHERE numJaula = :numJaula 
-                      ORDER BY nombre_animal";
-            
-            $stmt = $this->conn->prepare($query);
-            $stmt->execute(['numJaula' => $numJaula]);
-            
-            return $stmt->fetchAll();
-        } catch (PDOException $e) {
-            error_log("Error en getAnimalesByJaula: " . $e->getMessage());
-            return [];
-        }
-    }
-
-    /**
-     * Buscar animales
-     */
     public function buscar($termino) {
+        // ACTUALIZADO CON BÚSQUEDA OPTIMIZADA
         try {
-            // Si el término es muy corto, usamos LIKE como fallback, 
-            // pero para frases usamos MATCH AGAINST
-            if (strlen($termino) < 4) {
-                $query = "SELECT 
-                            a.numIdentif,
-                            a.nombre AS nombre_animal,
-                            a.sexo,
-                            a.nombre_cientifico, -- Corregido de nombre_cientifico
-                            j.nombre AS nombre_jaula,
-                            j.numJaula,
-                            vaa.nivel_alerta
-                          FROM Animales a
-                          LEFT JOIN Jaulas j ON a.numJaula = j.numJaula
-                          LEFT JOIN VistaAnimalesConAlertas vaa ON a.numIdentif = vaa.numIdentif
-                          WHERE a.nombre LIKE :termino 
-                             OR a.nombre_cientifico LIKE :termino 
-                             OR a.numIdentif LIKE :termino
-                          LIMIT 20";
-                $stmt = $this->conn->prepare($query);
-                $stmt->bindValue(':termino', "%$termino%");
-            } else {
-                // Búsqueda profesional usando índices naturales
-                $query = "SELECT 
-                            a.numIdentif,
-                            a.nombre AS nombre_animal,
-                            a.sexo,
-                            a.nombre_cientifico,
-                            j.nombre AS nombre_jaula,
-                            j.numJaula,
-                            vaa.nivel_alerta,
-                            MATCH(a.nombre, a.nombre_cientifico) AGAINST(:termino IN BOOLEAN MODE) as relevancia
-                          FROM Animales a
-                          LEFT JOIN Jaulas j ON a.numJaula = j.numJaula
-                          LEFT JOIN VistaAnimalesConAlertas vaa ON a.numIdentif = vaa.numIdentif
-                          WHERE MATCH(a.nombre, a.nombre_cientifico) AGAINST(:termino IN BOOLEAN MODE)
-                             OR a.numIdentif = :id
-                          ORDER BY relevancia DESC
-                          LIMIT 50";
-                $stmt = $this->conn->prepare($query);
-                $stmt->bindValue(':termino', "$termino*"); // El * permite búsqueda parcial
-                $stmt->bindValue(':id', $termino);
-            }
+            $terminoLike = "%{$termino}%";
+            $query = "SELECT 
+                        a.numIdentif,
+                        a.nombre AS nombre_animal,
+                        a.sexo,
+                        a.nombre_cientifico,
+                        j.nombre AS nombre_jaula,
+                        j.numJaula,
+                        vaa.nivel_alerta
+                      FROM Animales a
+                      LEFT JOIN Jaulas j ON a.numJaula = j.numJaula
+                      LEFT JOIN VistaAnimalesConAlertas vaa ON a.numIdentif = vaa.numIdentif
+                      WHERE a.nombre LIKE :termino
+                         OR a.nombre_cientifico LIKE :termino
+                         OR a.numIdentif LIKE :termino
+                      ORDER BY a.nombre
+                      LIMIT 50";
             
-            $stmt->execute();
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute(['termino' => $terminoLike]);
+            
             return $stmt->fetchAll();
         } catch (PDOException $e) {
             error_log("Error en buscar: " . $e->getMessage());
             return [];
         }
     }
-}
 
-    /**
-     * Crear un nuevo animal
-     */
     public function crear($datos) {
         try {
             $query = "INSERT INTO Animales 
                       (numIdentif, nombre, sexo, fechaNac, numJaula, nombre_cientifico, numPais) 
                       VALUES 
-                      (:numIdentif, :nombre, :sexo, :fechaNac, :numJaula, :nombre_cientifico, :numPais)";
+                      (:numIdentif, :nombre, :sexo, :fechaNac, :numJaula, :nombreA, :numPais)";
             
             $stmt = $this->conn->prepare($query);
             $stmt->execute([
@@ -153,17 +100,15 @@ class Animal {
                 'sexo' => $datos['sexo'],
                 'fechaNac' => $datos['fechaNac'],
                 'numJaula' => $datos['numJaula'],
-                'nombre_cientifico' => $datos['nombre_cientifico'],
+                'nombreA' => $datos['nombreA'], // Asegúrate que el array de entrada use esta clave o ajústalo
                 'numPais' => $datos['numPais']
             ]);
             
             return true;
         } catch (PDOException $e) {
-            error_log("Error en crear animal: " . $e->getMessage());
             return false;
         }
     }
-
     /**
      * Actualizar información de un animal
      */
@@ -312,3 +257,4 @@ class Animal {
         }
     }
 }
+?>

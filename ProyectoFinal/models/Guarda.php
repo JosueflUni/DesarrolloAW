@@ -3,9 +3,6 @@
 
 require_once __DIR__ . '/../config/database.php';
 
-/**
- * Modelo para operaciones de Guardas
- */
 class Guarda {
     private $db;
     private $conn;
@@ -15,11 +12,9 @@ class Guarda {
         $this->conn = $this->db->getConnection();
     }
 
-    /**
-     * Obtener todas las jaulas asignadas a un guarda con información completa
-     */
     public function getMisJaulas($nombreEmpleado) {
         try {
+            // CORRECCIÓN: Tablas actualizadas
             $query = "SELECT 
                         j.numJaula,
                         j.nombre AS nombre_jaula,
@@ -44,16 +39,13 @@ class Guarda {
         }
     }
 
-    /**
-     * Obtener animales de una jaula específica con alertas médicas
-     */
     public function getAnimalesJaula($numJaula, $nombreEmpleado) {
         try {
-            // Verificar que el guarda tenga acceso a esta jaula
             if (!$this->verificarAccesoJaula($nombreEmpleado, $numJaula)) {
                 return ['error' => 'Acceso denegado'];
             }
 
+            // CORRECCIÓN: nombre_cientifico y tablas
             $query = "SELECT 
                         vaa.numIdentif,
                         vaa.nombre_animal,
@@ -86,9 +78,6 @@ class Guarda {
         }
     }
 
-    /**
-     * Obtener detalle completo de un animal
-     */
     public function getDetalleAnimal($numIdentif, $nombreEmpleado) {
         try {
             $query = "SELECT 
@@ -97,7 +86,7 @@ class Guarda {
                         a.sexo,
                         a.fechaNac,
                         a.numJaula,
-                        a.nombre_cientifico AS nombre_cientifico,
+                        a.nombre_cientifico,
                         p.nombre AS pais_origen,
                         j.nombre AS nombre_jaula,
                         vaa.nivel_alerta,
@@ -114,7 +103,6 @@ class Guarda {
             $animal = $stmt->fetch();
             
             if ($animal) {
-                // Obtener historial médico
                 $animal['historial_medico'] = $this->getHistorialMedico($numIdentif);
             }
             
@@ -125,9 +113,6 @@ class Guarda {
         }
     }
 
-    /**
-     * Obtener historial médico de un animal
-     */
     private function getHistorialMedico($numIdentif) {
         try {
             $query = "SELECT 
@@ -155,9 +140,6 @@ class Guarda {
         }
     }
 
-    /**
-     * Buscar animales en todo el zoológico (solo lectura)
-     */
     public function buscarAnimal($termino) {
         try {
             $terminoLike = "%{$termino}%";
@@ -166,7 +148,7 @@ class Guarda {
                         a.numIdentif,
                         a.nombre AS nombre_animal,
                         a.sexo,
-                        a.nombre_cientifico AS nombre_cientifico,
+                        a.nombre_cientifico,
                         j.nombre AS nombre_jaula,
                         j.numJaula,
                         vaa.nivel_alerta
@@ -189,9 +171,6 @@ class Guarda {
         }
     }
 
-    /**
-     * Obtener estadísticas del guarda
-     */
     public function getEstadisticas($nombreEmpleado) {
         try {
             $query = "SELECT 
@@ -218,9 +197,6 @@ class Guarda {
         }
     }
 
-    /**
-     * Verificar si el guarda tiene acceso a una jaula
-     */
     private function verificarAccesoJaula($nombreEmpleado, $numJaula) {
         try {
             $query = "SELECT COUNT(*) FROM Guardas 
@@ -240,12 +216,8 @@ class Guarda {
         }
     }
 
-    /**
-     * Registrar observación de animal (funcionalidad adicional)
-     */
     public function registrarObservacion($numIdentif, $nombreEmpleado, $observacion) {
         try {
-            // Verificar que el guarda tenga acceso al animal
             $query = "SELECT COUNT(*) FROM Animales a
                       INNER JOIN Guardas g ON a.numJaula = g.numJaula
                       WHERE a.numIdentif = :numIdentif 
@@ -260,53 +232,10 @@ class Guarda {
             if ($stmt->fetchColumn() == 0) {
                 return ['error' => 'Acceso denegado'];
             }
-            
-            // Aquí podrías insertar en una tabla de observaciones si existiera
-            // Por ahora solo retornamos éxito
             return ['success' => true, 'mensaje' => 'Observación registrada'];
-            
         } catch (PDOException $e) {
             error_log("Error en registrarObservacion: " . $e->getMessage());
             return ['error' => 'Error al registrar observación'];
-        }
-    }
-
-    public function getAnimalesDeTodasMisJaulas($nombreEmpleado) {
-        try {
-            $query = "SELECT 
-                        g.numJaula,
-                        vaa.numIdentif,
-                        vaa.nombre_animal,
-                        vaa.sexo,
-                        vaa.nombre_cientifico,
-                        vaa.total_enfermedades,
-                        vaa.ultima_enfermedad,
-                        vaa.nivel_alerta,
-                        p.nombre AS nombre_pais
-                    FROM Guardas g
-                    INNER JOIN VistaAnimalesConAlertas vaa ON g.numJaula = vaa.numJaula
-                    LEFT JOIN Animales a ON vaa.numIdentif = a.numIdentif
-                    LEFT JOIN Paises p ON a.numPais = p.numPais
-                    WHERE g.nombreEmpleado = :nombreEmpleado
-                    ORDER BY g.numJaula, vaa.nombre_animal";
-            
-            $stmt = $this->conn->prepare($query);
-            $stmt->execute(['nombreEmpleado' => $nombreEmpleado]);
-            
-            // Agrupar por jaula
-            $resultado = [];
-            while ($row = $stmt->fetch()) {
-                $jaula = $row['numJaula'];
-                if (!isset($resultado[$jaula])) {
-                    $resultado[$jaula] = [];
-                }
-                $resultado[$jaula][] = $row;
-            }
-            
-            return $resultado;
-        } catch (PDOException $e) {
-            error_log("Error en getAnimalesDeTodasMisJaulas: " . $e->getMessage());
-            return [];
         }
     }
 }

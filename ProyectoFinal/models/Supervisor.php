@@ -5,6 +5,7 @@ require_once __DIR__ . '/../config/database.php';
 
 /**
  * Modelo para operaciones de Supervisores
+ * ACTUALIZADO: Compatible con estructura de BD normalizada
  */
 class Supervisor {
     private $db;
@@ -20,6 +21,7 @@ class Supervisor {
      */
     public function getMiCamino($nombreEmpleado) {
         try {
+            // CORRECCIÓN: Tablas Supervisores, Caminos, Jaulas, Animales, Guardas
             $query = "SELECT 
                         c.numCamino,
                         c.nombre AS nombre_camino,
@@ -150,7 +152,6 @@ class Supervisor {
      */
     public function getDetalleJaula($numJaula, $nombreEmpleado) {
         try {
-            // Verificar acceso
             if (!$this->verificarAccesoJaula($nombreEmpleado, $numJaula)) {
                 return ['error' => 'Acceso denegado'];
             }
@@ -174,7 +175,6 @@ class Supervisor {
             $jaula = $stmt->fetch();
             
             if ($jaula) {
-                // Obtener animales de la jaula
                 $jaula['animales'] = $this->getAnimalesJaula($numJaula);
             }
             
@@ -186,15 +186,16 @@ class Supervisor {
     }
 
     /**
-     * Obtener animales de una jaula
+     * Obtener animales de una jaula (Método privado auxiliar)
      */
     private function getAnimalesJaula($numJaula) {
         try {
+            // CORRECCIÓN: nombre_cientifico
             $query = "SELECT 
                         a.numIdentif,
                         a.nombre AS nombre_animal,
                         a.sexo,
-                        a.nombre_cientifico AS nombre_cientifico,
+                        a.nombre_cientifico, 
                         vaa.nivel_alerta
                       FROM Animales a
                       LEFT JOIN VistaAnimalesConAlertas vaa ON a.numIdentif = vaa.numIdentif
@@ -249,6 +250,7 @@ class Supervisor {
      */
     public function getDistribucionEspecies($nombreEmpleado) {
         try {
+            // CORRECCIÓN: nombre_cientifico
             $query = "SELECT 
                         a.nombre_cientifico AS especie,
                         COUNT(*) AS cantidad,
@@ -271,9 +273,6 @@ class Supervisor {
         }
     }
 
-    /**
-     * Verificar si el supervisor tiene acceso a una jaula
-     */
     private function verificarAccesoJaula($nombreEmpleado, $numJaula) {
         try {
             $query = "SELECT COUNT(*) 
@@ -290,29 +289,22 @@ class Supervisor {
             
             return $stmt->fetchColumn() > 0;
         } catch (PDOException $e) {
-            error_log("Error en verificarAccesoJaula: " . $e->getMessage());
             return false;
         }
     }
 
-    /**
-     * Generar reporte de rendimiento del camino (funcionalidad adicional)
-     */
     public function generarReporte($nombreEmpleado, $fechaInicio, $fechaFin) {
         try {
-            // Este es un ejemplo de cómo podrías generar reportes
-            $reporte = [
+            return [
                 'periodo' => ['inicio' => $fechaInicio, 'fin' => $fechaFin],
                 'camino' => $this->getMiCamino($nombreEmpleado),
                 'estadisticas' => $this->getEstadisticasCamino($nombreEmpleado),
                 'personal' => $this->getPersonalCamino($nombreEmpleado),
                 'alertas' => $this->getAlertasMedicas($nombreEmpleado)
             ];
-            
-            return $reporte;
         } catch (Exception $e) {
-            error_log("Error en generarReporte: " . $e->getMessage());
             return null;
         }
     }
 }
+?>

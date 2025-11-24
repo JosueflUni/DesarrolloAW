@@ -30,7 +30,7 @@ class Jaula {
                         vjc.total_animales,
                         vjc.guardas_asignados
                       FROM Jaulas j
-                      LEFT JOIN Caminos c ON j.numCamino = c.numCamino
+                      LEFT JOIN LosCaminos c ON j.numCamino = c.numCamino
                       LEFT JOIN VistaJaulasCompletas vjc ON j.numJaula = vjc.numJaula
                       WHERE j.numJaula = :numJaula";
             
