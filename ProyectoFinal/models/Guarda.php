@@ -270,4 +270,44 @@ class Guarda {
             return ['error' => 'Error al registrar observación'];
         }
     }
+
+    public function getAnimalesDeTodasMisJaulas($nombreEmpleado) {
+        try {
+            $query = "SELECT 
+                        g.numJaula,
+                        vaa.numIdentif,
+                        vaa.nombre_animal,
+                        vaa.sexo,
+                        vaa.nombre_cientifico,
+                        vaa.total_enfermedades,
+                        vaa.ultima_enfermedad,
+                        vaa.nivel_alerta,
+                        p.nombre AS nombre_pais
+                    FROM LosGuardas g
+                    INNER JOIN VistaAnimalesConAlertas vaa ON g.numJaula = vaa.numJaula
+                    LEFT JOIN LosAnimales a ON vaa.numIdentif = a.numIdentif
+                    LEFT JOIN LosPaises p ON a.numPais = p.numPais
+                    WHERE g.nombreEmpleado = :nombreEmpleado
+                    ORDER BY g.numJaula, vaa.nombre_animal";
+            
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute(['nombreEmpleado' => $nombreEmpleado]);
+            
+            // Agrupar por jaula
+            $resultado = [];
+            while ($row = $stmt->fetch()) {
+                $jaula = $row['numJaula'];
+                if (!isset($resultado[$jaula])) {
+                    $resultado[$jaula] = [];
+                }
+                $resultado[$jaula][] = $row;
+            }
+            
+            return $resultado;
+        } catch (PDOException $e) {
+            error_log("Error en getAnimalesDeTodasMisJaulas: " . $e->getMessage());
+            return [];
+        }
+    }
 }
+?>

@@ -81,13 +81,13 @@ class AuthController {
         return $this->redirigirSegunRol($rolSeleccionado);
     }
 
+    // ✅ MÉTODO CORREGIDO
     public function cambiarRol() {
         if (!SessionManager::isLoggedIn()) {
             header('Location: /dawb/ProyectoFinal/public/index.php');
             exit;
         }
 
-        // CRITICAL FIX: Usar findByUsername, no authenticate con pass vacío
         $nombreEmpleado = SessionManager::getNombreEmpleado();
         $usuario = $this->userModel->findByUsername($nombreEmpleado);
 
@@ -100,16 +100,33 @@ class AuthController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $nuevoRol = $_POST['rol'] ?? '';
             if (in_array($nuevoRol, $usuario['roles_disponibles'])) {
-                // Actualizar sesión sin pedir login de nuevo
-                $datosAdicionales = [];
-                if ($nuevoRol === 'GUARDA') $datosAdicionales['jaulas'] = $usuario['jaulas'] ?? [];
-                if ($nuevoRol === 'SUPERVISOR') $datosAdicionales['camino'] = $usuario['camino'] ?? null;
+                // FIX: Reconstruir datos para actualizar sesión
+                $datosAdicionales = [
+                    'nombre_completo' => $usuario['nombre_completo'],
+                    'jaulas' => [],
+                    'camino' => null
+                ];
                 
-                SessionManager::cambiarRol($nuevoRol, $datosAdicionales);
-                SessionManager::setFlash('success', 'Rol cambiado a ' . $nuevoRol);
+                if ($nuevoRol === 'GUARDA') {
+                    $datosAdicionales['jaulas'] = $usuario['jaulas'] ?? [];
+                }
+                if ($nuevoRol === 'SUPERVISOR') {
+                    $datosAdicionales['camino'] = $usuario['camino'] ?? null;
+                }
+                
+                // Reutilizar login() para actualizar sesión completa
+                SessionManager::login($nombreEmpleado, $nuevoRol, $datosAdicionales);
+                
+                // Registrar en auditoría
+                $this->userModel->registrarAcceso($nombreEmpleado, 'CAMBIO_ROL', $nuevoRol, "Cambio de rol a $nuevoRol");
+                
+                SessionManager::setFlash('success', 'Rol cambiado exitosamente a ' . $nuevoRol);
                 $this->redirigirSegunRol($nuevoRol);
+            } else {
+                SessionManager::setFlash('error', 'Rol no válido');
             }
         }
+        
         // Si no es POST o falla, redirigir al dashboard actual
         $this->redirigirSegunRol(SessionManager::getRol());
     }

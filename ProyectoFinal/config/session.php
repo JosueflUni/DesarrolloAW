@@ -51,10 +51,20 @@ class SessionManager {
             return false;
         }
         
-        // Validación básica de Fingerprint (IP + User Agent)
+        // Regenerar ID cada 15 minutos para mayor seguridad
+        if (isset($_SESSION['ultima_regeneracion'])) {
+            if (time() - $_SESSION['ultima_regeneracion'] > 900) {
+                session_regenerate_id(true);
+                $_SESSION['ultima_regeneracion'] = time();
+            }
+        } else {
+            $_SESSION['ultima_regeneracion'] = time();
+        }
+        
+        // Validación de Fingerprint
         if (isset($_SESSION['user_agent']) && $_SESSION['user_agent'] !== ($_SERVER['HTTP_USER_AGENT'] ?? '')) {
-             self::logout();
-             return false;
+            self::logout();
+            return false;
         }
 
         $_SESSION['ultima_actividad'] = time();
