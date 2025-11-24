@@ -110,36 +110,41 @@ class Supervisor {
         try {
             if (!$caminoId) return null;
 
+            // CAMBIO CLAVE: Usamos COLLATE en la comparación para forzar compatibilidad
+            // y alias 'j' explícitos en todas partes.
             $query = "SELECT 
                         (SELECT COUNT(*) FROM Jaulas WHERE numCamino = :cid) AS total_jaulas,
+                        
                         (SELECT COUNT(*) FROM Jaulas j 
                          LEFT JOIN Animales a ON j.numJaula = a.numJaula 
                          WHERE j.numCamino = :cid AND a.numIdentif IS NULL) AS jaulas_vacias,
+                        
                         (SELECT COUNT(DISTINCT j.numJaula) 
                          FROM Animales a 
                          INNER JOIN Jaulas j ON a.numJaula = j.numJaula 
                          WHERE j.numCamino = :cid) AS jaulas_ocupadas,
+                        
                         (SELECT COUNT(DISTINCT g.nombreEmpleado) 
                          FROM Guardas g
                          INNER JOIN Jaulas j ON g.numJaula = j.numJaula 
                          WHERE j.numCamino = :cid) AS total_guardas,
+                        
+                        -- SUBQUERY PROBLEMÁTICA BLINDADA
                         (SELECT COUNT(DISTINCT a.numIdentif)
                          FROM Animales a
                          INNER JOIN Jaulas j ON a.numJaula = j.numJaula
                          INNER JOIN VistaAnimalesConAlertas vaa ON a.numIdentif = vaa.numIdentif
-                         WHERE j.numCamino = :cid AND BINARY vaa.nivel_alerta = 'CRITICO') AS animales_criticos";
+                         WHERE j.numCamino = :cid 
+                         -- Convertimos ambos lados a binario o forzamos collation si es necesario
+                         AND vaa.nivel_alerta COLLATE utf8mb4_unicode_ci = 'CRITICO') AS animales_criticos";
             
             $stmt = $this->conn->prepare($query);
             $stmt->execute(['cid' => $caminoId]);
             
             return $stmt->fetch();
         } catch (PDOException $e) {
-            error_log("Error en Estadísticas: " . $e->getMessage());
-            return [
-                'total_jaulas' => 0, 'jaulas_vacias' => 0, 
-                'jaulas_ocupadas' => 0, 'total_guardas' => 0, 
-                'animales_criticos' => 0
-            ];
+            // IMPORTANTE: Quitamos el try-catch silencioso temporalmente para que veas el error en tu dashboard
+            die("Error CRÍTICO en Estadísticas: " . $e->getMessage()); 
         }
     }
 
