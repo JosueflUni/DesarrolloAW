@@ -57,16 +57,9 @@ class Guarda {
                         p.nombre AS nombre_pais
                       FROM VistaAnimalesConAlertas vaa
                       INNER JOIN Animales a ON vaa.numIdentif = a.numIdentif
-                      LEFT JOIN Paises p ON a.numPais = p.numPais
+                      LEFT JOIN Paises p ON a.numPais = p.numPais 
                       WHERE vaa.numJaula = :numJaula
-                      ORDER BY 
-                        CASE vaa.nivel_alerta
-                            WHEN 'CRITICO' THEN 1
-                            WHEN 'RECIENTE' THEN 2
-                            WHEN 'HISTORIAL' THEN 3
-                            ELSE 4
-                        END,
-                        vaa.nombre_animal";
+                      ORDER BY vaa.nombre_animal";
             
             $stmt = $this->conn->prepare($query);
             $stmt->execute(['numJaula' => $numJaula]);

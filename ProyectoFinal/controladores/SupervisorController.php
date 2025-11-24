@@ -26,14 +26,38 @@ class SupervisorController {
      * Mostrar dashboard principal
      */
     public function dashboard() {
+        // 1. Obtener todos los caminos del supervisor
+        $misCaminos = $this->supervisorModel->getMisCaminos($this->nombreEmpleado);
+        
+        // 2. Determinar cuál mostrar (URL o el primero)
+        $caminoSeleccionadoId = $_GET['camino_id'] ?? ($misCaminos[0]['numCamino'] ?? null);
+        
+        $caminoActual = null;
+        if ($misCaminos) {
+            foreach ($misCaminos as $c) {
+                if ($c['numCamino'] == $caminoSeleccionadoId) {
+                    $caminoActual = $c;
+                    break;
+                }
+            }
+            // Si el ID de la URL no coincide, usar el primero
+            if (!$caminoActual) {
+                $caminoActual = $misCaminos[0];
+                $caminoSeleccionadoId = $caminoActual['numCamino'];
+            }
+        }
+
+        // 3. Obtener datos pasando el ID CORRECTO (Aquí estaba el problema lógico)
+        // Notarás que ahora pasamos $caminoSeleccionadoId en lugar de $this->nombreEmpleado
         $data = [
             'nombreEmpleado' => $this->nombreEmpleado,
             'nombreCompleto' => SessionManager::getSessionInfo()['nombre_completo'],
-            'miCamino' => $this->supervisorModel->getMiCamino($this->nombreEmpleado),
-            'jaulasCamino' => $this->supervisorModel->getJaulasCamino($this->nombreEmpleado),
+            'misCaminos' => $misCaminos,
+            'miCamino' => $caminoActual,
+            'jaulasCamino' => $this->supervisorModel->getJaulasCamino($this->nombreEmpleado), // Este usa nombreEmpleado porque filtra internamente
             'personalCamino' => $this->supervisorModel->getPersonalCamino($this->nombreEmpleado),
-            'estadisticas' => $this->supervisorModel->getEstadisticasCamino($this->nombreEmpleado),
-            'alertasMedicas' => $this->supervisorModel->getAlertasMedicas($this->nombreEmpleado),
+            'estadisticas' => $this->supervisorModel->getEstadisticasCamino($caminoSeleccionadoId), // <--- CORREGIDO
+            'alertasMedicas' => $this->supervisorModel->getAlertasMedicas($caminoSeleccionadoId),   // <--- CORREGIDO
             'distribucionEspecies' => $this->supervisorModel->getDistribucionEspecies($this->nombreEmpleado)
         ];
 

@@ -1,17 +1,45 @@
 <?php
 // vistas/supervisor/dashboard.php
+
+// 1. Carga de configuración y modelos
 require_once __DIR__ . '/../../config/session.php';
 require_once __DIR__ . '/../../models/Supervisor.php';
 
-// Proteger la página
+// 2. Protección de sesión
 requireAuth(['SUPERVISOR']);
 
 $supervisorModel = new Supervisor();
 $nombreEmpleado = SessionManager::getNombreEmpleado();
 $nombreCompleto = SessionManager::getSessionInfo()['nombre_completo'];
 
-// Obtener datos
-$miCamino = $supervisorModel->getMiCamino($nombreEmpleado);
+// 3. Lógica de Selección de Camino (Multicamino)
+// Si el controlador no pasó la variable $misCaminos, la buscamos aquí.
+if (!isset($misCaminos)) {
+    // Nota: Asegúrate de haber renombrado getMiCamino a getMisCaminos en el modelo como indicamos antes.
+    // Si no lo hiciste, usa getMiCamino() pero solo verás el primero.
+    $misCaminos = method_exists($supervisorModel, 'getMisCaminos') 
+        ? $supervisorModel->getMisCaminos($nombreEmpleado) 
+        : [$supervisorModel->getMiCamino($nombreEmpleado)];
+}
+
+// Determinar cuál camino mostrar (Por ID en URL o el primero por defecto)
+$caminoSeleccionadoId = $_GET['camino_id'] ?? ($misCaminos[0]['numCamino'] ?? null);
+$miCamino = null;
+
+if ($misCaminos) {
+    foreach ($misCaminos as $c) {
+        if ($c['numCamino'] == $caminoSeleccionadoId) {
+            $miCamino = $c;
+            break;
+        }
+    }
+    // Si el ID de la URL no es válido, usar el primero
+    if (!$miCamino && !empty($misCaminos)) {
+        $miCamino = $misCaminos[0];
+    }
+}
+
+// 4. Obtener resto de datos (Listas globales del supervisor)
 $jaulasCamino = $supervisorModel->getJaulasCamino($nombreEmpleado);
 $personalCamino = $supervisorModel->getPersonalCamino($nombreEmpleado);
 $estadisticas = $supervisorModel->getEstadisticasCamino($nombreEmpleado);
@@ -34,167 +62,86 @@ $distribucionEspecies = $supervisorModel->getDistribucionEspecies($nombreEmplead
             --warning-color: #f39c12;
             --danger-color: #e74c3c;
         }
-        body {
-            background-color: #f8f9fa;
-        }
-        .navbar {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .stat-card {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            transition: transform 0.2s;
-            margin-bottom: 20px;
-        }
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-        }
-        .stat-icon {
-            width: 60px;
-            height: 60px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            color: white;
-        }
-        .section-card {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            margin-bottom: 25px;
-        }
-        .jaula-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-        }
-        .jaula-item {
-            border: 2px solid #e0e0e0;
-            border-radius: 12px;
-            padding: 20px;
-            transition: all 0.3s;
-            position: relative;
-        }
-        .jaula-item:hover {
-            border-color: var(--primary-color);
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.2);
-        }
-        .estado-badge {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: bold;
-        }
+        body { background-color: #f8f9fa; }
+        .navbar { background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); }
+        .section-card { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 25px; }
+        .stat-card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); transition: transform 0.2s; }
+        .stat-card:hover { transform: translateY(-5px); }
+        .stat-icon { width: 60px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; }
+        .jaula-item { border: 2px solid #e0e0e0; border-radius: 12px; padding: 20px; transition: all 0.3s; position: relative; }
+        .jaula-item:hover { border-color: var(--primary-color); transform: translateY(-3px); }
+        .estado-badge { position: absolute; top: 10px; right: 10px; padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; }
         .disponible { background-color: var(--success-color); color: white; }
         .ocupada { background-color: var(--warning-color); color: white; }
         .llena { background-color: var(--danger-color); color: white; }
-        .personal-card {
-            border: 1px solid #e0e0e0;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
-            transition: all 0.2s;
-        }
-        .personal-card:hover {
-            border-color: var(--primary-color);
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-        }
-        .chart-container {
-            max-height: 400px;
-        }
-        .alerta-item {
-            padding: 15px;
-            border-left: 4px solid;
-            margin-bottom: 10px;
-            border-radius: 5px;
-            background: #f8f9fa;
-        }
+        .alerta-item { padding: 15px; border-left: 4px solid; margin-bottom: 10px; border-radius: 5px; background: #f8f9fa; }
         .alerta-critico { border-left-color: var(--danger-color); }
         .alerta-reciente { border-left-color: var(--warning-color); }
-        .tab-content {
-            padding-top: 20px;
-        }
+        .jaula-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
     </style>
 </head>
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+    <nav class="navbar navbar-expand-lg navbar-dark mb-4 shadow-sm">
         <div class="container-fluid">
-            <a class="navbar-brand" href="#">
-                <i class="bi bi-diagram-3"></i> Dashboard Supervisor
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <span class="nav-link">
-                            <i class="bi bi-person-badge"></i> <?php echo htmlspecialchars($nombreCompleto); ?>
-                        </span>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/dawb/ProyectoFinal/controladores/AuthController.php?action=logout">
-                            <i class="bi bi-box-arrow-right"></i> Salir
-                        </a>
-                    </li>
-                </ul>
+            <a class="navbar-brand" href="#"><i class="bi bi-diagram-3"></i> Dashboard Supervisor</a>
+            <div class="d-flex text-white align-items-center">
+                <span class="me-3"><i class="bi bi-person-badge"></i> <?php echo htmlspecialchars($nombreCompleto); ?></span>
+                <a href="/dawb/ProyectoFinal/controladores/AuthController.php?action=logout" class="btn btn-outline-light btn-sm">Salir</a>
             </div>
         </div>
     </nav>
 
     <div class="container-fluid px-4">
-        <!-- Mensajes Flash -->
-        <?php
-        $flash = SessionManager::getFlash();
-        if ($flash):
-        ?>
-            <div class="alert alert-<?php echo $flash['tipo'] === 'error' ? 'danger' : 'success'; ?> alert-dismissible fade show">
-                <?php echo htmlspecialchars($flash['mensaje']); ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        <?php endif; ?>
-
-        <!-- Información del Camino -->
+        
         <?php if ($miCamino): ?>
         <div class="section-card">
+            <?php if (count($misCaminos) > 1): ?>
+                <div class="d-flex justify-content-end mb-2">
+                    <div class="dropdown">
+                        <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-signpost-split"></i> Cambiar Camino
+                        </button>
+                        <ul class="dropdown-menu">
+                            <?php foreach ($misCaminos as $c): ?>
+                                <li>
+                                    <a class="dropdown-item <?php echo ($c['numCamino'] == $miCamino['numCamino']) ? 'active' : ''; ?>" 
+                                       href="?action=dashboard&camino_id=<?php echo $c['numCamino']; ?>">
+                                        <?php echo htmlspecialchars($c['nombre_camino']); ?>
+                                    </a>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                </div>
+            <?php endif; ?>
+
             <div class="row align-items-center">
                 <div class="col-md-8">
-                    <h2 class="mb-2">
-                        <i class="bi bi-signpost-2"></i> 
+                    <h2 class="mb-2 text-primary">
+                        <i class="bi bi-signpost-2-fill"></i> 
                         <?php echo htmlspecialchars($miCamino['nombre_camino']); ?>
                     </h2>
-                    <p class="text-muted mb-0">
+                    <p class="text-muted mb-0 fs-5">
                         Camino #<?php echo $miCamino['numCamino']; ?> | 
-                        Longitud: <?php echo $miCamino['largo']; ?> metros
+                        Longitud: <strong><?php echo $miCamino['largo']; ?></strong> metros
                     </p>
                 </div>
                 <div class="col-md-4 text-end">
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#reporteModal">
+                    <button class="btn btn-primary btn-lg" onclick="alert('Función de reporte en desarrollo')">
                         <i class="bi bi-file-earmark-pdf"></i> Generar Reporte
                     </button>
                 </div>
             </div>
         </div>
+        <?php else: ?>
+            <div class="alert alert-warning">No se encontró información del camino asignado.</div>
         <?php endif; ?>
 
-        <!-- Estadísticas -->
         <div class="row mb-4">
             <div class="col-lg-3 col-md-6">
                 <div class="stat-card">
                     <div class="d-flex align-items-center">
-                        <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <div class="stat-icon" style="background: #667eea;">
                             <i class="bi bi-house-door"></i>
                         </div>
                         <div class="ms-3">
@@ -207,7 +154,7 @@ $distribucionEspecies = $supervisorModel->getDistribucionEspecies($nombreEmplead
             <div class="col-lg-3 col-md-6">
                 <div class="stat-card">
                     <div class="d-flex align-items-center">
-                        <div class="stat-icon" style="background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);">
+                        <div class="stat-icon" style="background: #2ecc71;">
                             <i class="bi bi-check-circle"></i>
                         </div>
                         <div class="ms-3">
@@ -220,7 +167,7 @@ $distribucionEspecies = $supervisorModel->getDistribucionEspecies($nombreEmplead
             <div class="col-lg-3 col-md-6">
                 <div class="stat-card">
                     <div class="d-flex align-items-center">
-                        <div class="stat-icon" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);">
+                        <div class="stat-icon" style="background: #3498db;">
                             <i class="bi bi-people"></i>
                         </div>
                         <div class="ms-3">
@@ -233,55 +180,36 @@ $distribucionEspecies = $supervisorModel->getDistribucionEspecies($nombreEmplead
             <div class="col-lg-3 col-md-6">
                 <div class="stat-card">
                     <div class="d-flex align-items-center">
-                        <div class="stat-icon" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+                        <div class="stat-icon" style="background: #e74c3c;">
                             <i class="bi bi-exclamation-triangle"></i>
                         </div>
                         <div class="ms-3">
                             <h3 class="mb-0"><?php echo $estadisticas['animales_criticos'] ?? 0; ?></h3>
-                            <p class="text-muted mb-0">Alertas</p>
+                            <p class="text-muted mb-0">Alertas Críticas</p>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Tabs -->
         <ul class="nav nav-tabs mb-3" id="mainTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="jaulas-tab" data-bs-toggle="tab" data-bs-target="#jaulas" type="button">
-                    <i class="bi bi-house-door"></i> Gestión de Jaulas
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#jaulas"><i class="bi bi-house-door"></i> Jaulas</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#personal"><i class="bi bi-people"></i> Personal</button></li>
+            <li class="nav-item">
+                <button class="nav-link text-danger" data-bs-toggle="tab" data-bs-target="#alertas">
+                    <i class="bi bi-bell"></i> Alertas Médicas 
+                    <?php if(!empty($alertasMedicas)): ?><span class="badge bg-danger ms-1"><?php echo count($alertasMedicas); ?></span><?php endif; ?>
                 </button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="personal-tab" data-bs-toggle="tab" data-bs-target="#personal" type="button">
-                    <i class="bi bi-people"></i> Personal
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="alertas-tab" data-bs-toggle="tab" data-bs-target="#alertas" type="button">
-                    <i class="bi bi-bell"></i> Alertas Médicas
-                    <?php if (!empty($alertasMedicas)): ?>
-                        <span class="badge bg-danger"><?php echo count($alertasMedicas); ?></span>
-                    <?php endif; ?>
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="estadisticas-tab" data-bs-toggle="tab" data-bs-target="#estadisticas-tab-content" type="button">
-                    <i class="bi bi-graph-up"></i> Estadísticas
-                </button>
-            </li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#estadisticas"><i class="bi bi-graph-up"></i> Estadísticas</button></li>
         </ul>
 
-        <div class="tab-content" id="mainTabsContent">
-            <!-- Tab Jaulas -->
-            <div class="tab-pane fade show active" id="jaulas" role="tabpanel">
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="jaulas">
                 <div class="section-card">
-                    <h4 class="mb-4"><i class="bi bi-house-door-fill"></i> Estado de Jaulas</h4>
-                    
+                    <h4 class="mb-4">Estado de Jaulas Asignadas</h4>
                     <?php if (empty($jaulasCamino)): ?>
-                        <div class="alert alert-info">
-                            <i class="bi bi-info-circle"></i> No hay jaulas en este camino.
-                        </div>
+                        <div class="alert alert-info">No hay jaulas asignadas.</div>
                     <?php else: ?>
                         <div class="jaula-grid">
                             <?php foreach ($jaulasCamino as $jaula): ?>
@@ -289,35 +217,16 @@ $distribucionEspecies = $supervisorModel->getDistribucionEspecies($nombreEmplead
                                     <span class="estado-badge <?php echo strtolower($jaula['estado_ocupacion']); ?>">
                                         <?php echo $jaula['estado_ocupacion']; ?>
                                     </span>
-                                    
                                     <h5 class="mb-2">Jaula #<?php echo $jaula['numJaula']; ?></h5>
                                     <p class="text-muted mb-2"><?php echo htmlspecialchars($jaula['nombre_jaula'] ?? 'Sin nombre'); ?></p>
-                                    
+                                    <div class="small text-muted mb-2"><i class="bi bi-rulers"></i> <?php echo $jaula['tamano']; ?> m²</div>
                                     <div class="mb-2">
-                                        <small class="text-muted">
-                                            <i class="bi bi-rulers"></i> Tamaño: <?php echo $jaula['tamano']; ?> m²
-                                        </small>
+                                        <span class="badge bg-primary"><?php echo $jaula['total_animales'] ?? 0; ?> animales</span>
                                     </div>
-                                    
-                                    <div class="mb-2">
-                                        <span class="badge bg-primary">
-                                            <?php echo $jaula['total_animales'] ?? 0; ?> animales
-                                        </span>
-                                        <span class="badge bg-secondary">
-                                            <?php echo $jaula['estado_personal']; ?>
-                                        </span>
-                                    </div>
-                                    
-                                    <?php if ($jaula['guardas_asignados']): ?>
-                                        <small class="text-muted d-block mt-2">
-                                            <i class="bi bi-person-check"></i> 
-                                            <?php echo htmlspecialchars($jaula['guardas_asignados']); ?>
-                                        </small>
-                                    <?php endif; ?>
-                                    
-                                    <button class="btn btn-sm btn-outline-primary w-100 mt-3" onclick="verDetalleJaula(<?php echo $jaula['numJaula']; ?>)">
-                                        <i class="bi bi-eye"></i> Ver Detalle
-                                    </button>
+                                    <small class="text-muted d-block mt-2">
+                                        <i class="bi bi-person-check"></i> <?php echo htmlspecialchars($jaula['guardas_asignados'] ?? 'Sin asignar'); ?>
+                                    </small>
+                                    <button class="btn btn-sm btn-outline-primary w-100 mt-3" onclick="verDetalleJaula(<?php echo $jaula['numJaula']; ?>)">Ver Detalle</button>
                                 </div>
                             <?php endforeach; ?>
                         </div>
@@ -325,80 +234,20 @@ $distribucionEspecies = $supervisorModel->getDistribucionEspecies($nombreEmplead
                 </div>
             </div>
 
-            <!-- Tab Personal -->
-            <div class="tab-pane fade" id="personal" role="tabpanel">
+            <div class="tab-pane fade" id="alertas">
                 <div class="section-card">
-                    <h4 class="mb-4"><i class="bi bi-people-fill"></i> Personal a Cargo</h4>
-                    
-                    <?php if (empty($personalCamino)): ?>
-                        <div class="alert alert-info">
-                            <i class="bi bi-info-circle"></i> No hay personal asignado a las jaulas de este camino.
-                        </div>
-                    <?php else: ?>
-                        <div class="row">
-                            <?php foreach ($personalCamino as $guarda): ?>
-                                <div class="col-md-6">
-                                    <div class="personal-card">
-                                        <div class="row align-items-center">
-                                            <div class="col-md-8">
-                                                <h5 class="mb-1">
-                                                    <i class="bi bi-person-circle"></i>
-                                                    <?php echo htmlspecialchars($guarda['nombre_completo']); ?>
-                                                </h5>
-                                                <p class="text-muted small mb-2">
-                                                    Usuario: <?php echo htmlspecialchars($guarda['nombreEmpleado']); ?>
-                                                </p>
-                                                <div>
-                                                    <span class="badge bg-primary">
-                                                        <?php echo $guarda['total_jaulas']; ?> jaulas
-                                                    </span>
-                                                    <span class="badge bg-success">
-                                                        <?php echo $guarda['total_animales_cargo']; ?> animales
-                                                    </span>
-                                                </div>
-                                                <small class="text-muted d-block mt-2">
-                                                    <i class="bi bi-house-door"></i> 
-                                                    Jaulas: <?php echo htmlspecialchars($guarda['jaulas_asignadas']); ?>
-                                                </small>
-                                            </div>
-                                            <div class="col-md-4 text-end">
-                                                <button class="btn btn-sm btn-outline-secondary">
-                                                    <i class="bi bi-envelope"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
-
-            <!-- Tab Alertas -->
-            <div class="tab-pane fade" id="alertas" role="tabpanel">
-                <div class="section-card">
-                    <h4 class="mb-4"><i class="bi bi-bell-fill"></i> Alertas Médicas Activas</h4>
-                    
+                    <h4 class="mb-4 text-danger"><i class="bi bi-heart-pulse"></i> Alertas Médicas Activas</h4>
                     <?php if (empty($alertasMedicas)): ?>
-                        <div class="alert alert-success">
-                            <i class="bi bi-check-circle"></i> No hay alertas médicas activas en este momento.
-                        </div>
+                        <div class="alert alert-success"><i class="bi bi-check-circle"></i> Todo en orden. No hay alertas médicas activas.</div>
                     <?php else: ?>
                         <?php foreach ($alertasMedicas as $alerta): ?>
                             <div class="alerta-item alerta-<?php echo strtolower($alerta['nivel_alerta']); ?>">
-                                <div class="d-flex justify-content-between align-items-start">
+                                <div class="d-flex justify-content-between">
                                     <div>
-                                        <h5 class="mb-1">
-                                            <i class="bi bi-exclamation-triangle"></i>
-                                            Nivel: <?php echo $alerta['nivel_alerta']; ?>
-                                        </h5>
+                                        <h5 class="mb-1 text-danger fw-bold">Nivel: <?php echo $alerta['nivel_alerta']; ?></h5>
                                         <p class="mb-1"><strong><?php echo $alerta['total']; ?> animales afectados</strong></p>
-                                        <p class="mb-0 small"><?php echo htmlspecialchars($alerta['detalles']); ?></p>
+                                        <p class="mb-0 small text-muted"><?php echo htmlspecialchars($alerta['detalles']); ?></p>
                                     </div>
-                                    <span class="badge bg-<?php echo $alerta['nivel_alerta'] === 'CRITICO' ? 'danger' : 'warning'; ?> fs-6">
-                                        <?php echo $alerta['total']; ?>
-                                    </span>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -406,138 +255,106 @@ $distribucionEspecies = $supervisorModel->getDistribucionEspecies($nombreEmplead
                 </div>
             </div>
 
-            <!-- Tab Estadísticas -->
-            <div class="tab-pane fade" id="estadisticas-tab-content" role="tabpanel">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="section-card">
-                            <h4 class="mb-4"><i class="bi bi-graph-up"></i> Distribución de Especies</h4>
-                            <div class="table-responsive">
-                                <table class="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Especie</th>
-                                            <th>Cantidad</th>
-                                            <th>Jaulas</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($distribucionEspecies as $especie): ?>
-                                            <tr>
-                                                <td><em><?php echo htmlspecialchars($especie['especie']); ?></em></td>
-                                                <td>
-                                                    <span class="badge bg-primary"><?php echo $especie['cantidad']; ?></span>
-                                                </td>
-                                                <td>
-                                                    <small class="text-muted"><?php echo htmlspecialchars($especie['jaulas']); ?></small>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
+            <div class="tab-pane fade" id="personal">
+                <div class="section-card">
+                    <h4 class="mb-4">Personal a Cargo</h4>
+                    <div class="row">
+                        <?php foreach ($personalCamino as $guarda): ?>
+                            <div class="col-md-6">
+                                <div class="personal-card p-3 border rounded mb-3">
+                                    <h5><i class="bi bi-person"></i> <?php echo htmlspecialchars($guarda['nombre_completo']); ?></h5>
+                                    <p class="text-muted small mb-1">Usuario: <?php echo htmlspecialchars($guarda['nombreEmpleado']); ?></p>
+                                    <p class="mb-0"><span class="badge bg-info"><?php echo $guarda['total_jaulas']; ?> jaulas</span></p>
+                                </div>
                             </div>
-                        </div>
+                        <?php endforeach; ?>
                     </div>
-                    
-                    <div class="col-md-6">
-                        <div class="section-card">
-                            <h4 class="mb-4"><i class="bi bi-pie-chart"></i> Resumen General</h4>
-                            <canvas id="resumenChart"></canvas>
-                        </div>
-                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="estadisticas">
+                <div class="section-card">
+                    <h4 class="mb-4">Distribución de Especies</h4>
+                    <table class="table">
+                        <thead><tr><th>Especie</th><th>Cantidad</th><th>Jaulas</th></tr></thead>
+                        <tbody>
+                            <?php foreach ($distribucionEspecies as $e): ?>
+                                <tr>
+                                    <td><em><?php echo htmlspecialchars($e['especie']); ?></em></td>
+                                    <td><span class="badge bg-primary"><?php echo $e['cantidad']; ?></span></td>
+                                    <td><small><?php echo htmlspecialchars($e['jaulas']); ?></small></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal Detalle Jaula -->
     <div class="modal fade" id="detalleJaulaModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-house-door"></i> Detalle de Jaula</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Detalle de Jaula</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body" id="modalJaulaContent">
-                    <!-- Contenido dinámico -->
-                </div>
+                <div class="modal-body" id="modalJaulaContent">Cargando...</div>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script>
-        // Ver detalle de jaula
         function verDetalleJaula(numJaula) {
+            const modal = new bootstrap.Modal(document.getElementById('detalleJaulaModal'));
+            modal.show();
+            
             fetch(`/dawb/ProyectoFinal/api/supervisor.php?action=detalle_jaula&jaula=${numJaula}`)
-                .then(response => response.json())
+                .then(res => res.json())
                 .then(data => {
-                    if (data.error) {
-                        alert(data.error);
-                        return;
+                    if(data.error) { document.getElementById('modalJaulaContent').innerHTML = `<div class="alert alert-danger">${data.error}</div>`; return; }
+                    
+                    let animalesHtml = '';
+                    if(data.animales && data.animales.length > 0) {
+                        animalesHtml = '<div class="row mt-3">';
+                        data.animales.forEach(a => {
+                            animalesHtml += `
+                                <div class="col-md-6 mb-2">
+                                    <div class="p-2 border rounded">
+                                        <strong>${a.nombre_animal}</strong> <small class="text-muted">(${a.nombre_cientifico})</small><br>
+                                        <span class="badge bg-secondary">${a.sexo}</span>
+                                        ${a.nivel_alerta !== 'SANO' ? `<span class="badge bg-danger">${a.nivel_alerta}</span>` : '<span class="badge bg-success">Sano</span>'}
+                                    </div>
+                                </div>`;
+                        });
+                        animalesHtml += '</div>';
+                    } else {
+                        animalesHtml = '<p class="text-muted mt-3">No hay animales en esta jaula.</p>';
                     }
 
-                    let html = `
+                    const html = `
                         <div class="row">
-                            <div class="col-md-6">
-                                <h6>Información de la Jaula</h6>
-                                <p><strong>Número:</strong> ${data.numJaula}</p>
-                                <p><strong>Nombre:</strong> ${data.nombre_jaula || 'Sin nombre'}</p>
-                                <p><strong>Tamaño:</strong> ${data.tamano} m²</p>
-                                <p><strong>Camino:</strong> ${data.nombre_camino}</p>
+                            <div class="col-6">
+                                <h6>Datos Generales</h6>
+                                <p><strong>Jaula:</strong> #${data.numJaula}<br>
+                                <strong>Nombre:</strong> ${data.nombre_jaula}<br>
+                                <strong>Tamaño:</strong> ${data.tamano} m²</p>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-6">
                                 <h6>Estado</h6>
-                                <p><strong>Animales:</strong> ${data.total_animales || 0}</p>
-                                <p><strong>Guardas:</strong> ${data.guardas_asignados || 'Sin asignar'}</p>
+                                <p><strong>Ocupación:</strong> ${data.total_animales} animales<br>
+                                <strong>Personal:</strong> ${data.guardas_asignados || 'Ninguno'}</p>
                             </div>
                         </div>
+                        <hr>
+                        <h6>Animales</h6>
+                        ${animalesHtml}
                     `;
-
-                    if (data.animales && data.animales.length > 0) {
-                        html += '<hr><h6>Animales en la Jaula</h6><div class="row">';
-                        data.animales.forEach(animal => {
-                            html += `
-                                <div class="col-md-6 mb-2">
-                                    <div class="border rounded p-2">
-                                        <strong>${animal.nombre_animal}</strong>
-                                        <br><small><em>${animal.nombre_cientifico}</em></small>
-                                        <br><span class="badge bg-secondary">${animal.sexo}</span>
-                                        ${animal.nivel_alerta !== 'SANO' ? `<span class="badge bg-warning">${animal.nivel_alerta}</span>` : ''}
-                                    </div>
-                                </div>
-                            `;
-                        });
-                        html += '</div>';
-                    }
-
                     document.getElementById('modalJaulaContent').innerHTML = html;
-                    new bootstrap.Modal(document.getElementById('detalleJaulaModal')).show();
                 })
-                .catch(error => console.error('Error:', error));
+                .catch(err => document.getElementById('modalJaulaContent').innerHTML = '<p class="text-danger">Error al cargar datos.</p>');
         }
-
-        // Gráfico de resumen
-        const ctx = document.getElementById('resumenChart');
-        new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Jaulas Ocupadas', 'Jaulas Disponibles', 'Animales Críticos'],
-                datasets: [{
-                    data: [
-                        <?php echo $estadisticas['jaulas_ocupadas'] ?? 0; ?>,
-                        <?php echo $estadisticas['jaulas_vacias'] ?? 0; ?>,
-                        <?php echo $estadisticas['animales_criticos'] ?? 0; ?>
-                    ],
-                    backgroundColor: ['#3498db', '#2ecc71', '#e74c3c']
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true
-            }
-        });
     </script>
 </body>
 </html>

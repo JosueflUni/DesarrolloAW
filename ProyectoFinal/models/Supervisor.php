@@ -3,10 +3,6 @@
 
 require_once __DIR__ . '/../config/database.php';
 
-/**
- * Modelo para operaciones de Supervisores
- * ACTUALIZADO: Compatible con estructura de BD normalizada
- */
 class Supervisor {
     private $db;
     private $conn;
@@ -16,40 +12,36 @@ class Supervisor {
         $this->conn = $this->db->getConnection();
     }
 
-    /**
-     * Obtener información del camino asignado
-     */
-    public function getMiCamino($nombreEmpleado) {
+    public function getMisCaminos($nombreEmpleado) {
         try {
-            // CORRECCIÓN: Tablas Supervisores, Caminos, Jaulas, Animales, Guardas
             $query = "SELECT 
                         c.numCamino,
                         c.nombre AS nombre_camino,
                         c.largo,
                         COUNT(DISTINCT j.numJaula) AS total_jaulas,
-                        COUNT(DISTINCT a.numIdentif) AS total_animales,
-                        COUNT(DISTINCT g.nombreEmpleado) AS total_guardas
+                        (SELECT COUNT(*) 
+                         FROM Animales a 
+                         INNER JOIN Jaulas j2 ON a.numJaula = j2.numJaula 
+                         WHERE j2.numCamino = c.numCamino) AS total_animales,
+                        (SELECT COUNT(DISTINCT g.nombreEmpleado) 
+                         FROM Guardas g 
+                         INNER JOIN Jaulas j3 ON g.numJaula = j3.numJaula 
+                         WHERE j3.numCamino = c.numCamino) AS total_guardas
                       FROM Supervisores s
                       INNER JOIN Caminos c ON s.numCamino = c.numCamino
                       LEFT JOIN Jaulas j ON c.numCamino = j.numCamino
-                      LEFT JOIN Animales a ON j.numJaula = a.numJaula
-                      LEFT JOIN Guardas g ON j.numJaula = g.numJaula
                       WHERE s.nombreEmpleado = :nombreEmpleado
                       GROUP BY c.numCamino, c.nombre, c.largo";
             
             $stmt = $this->conn->prepare($query);
             $stmt->execute(['nombreEmpleado' => $nombreEmpleado]);
             
-            return $stmt->fetch();
+            return $stmt->fetchAll();
         } catch (PDOException $e) {
-            error_log("Error en getMiCamino: " . $e->getMessage());
-            return null;
+            return [];
         }
     }
 
-    /**
-     * Obtener todas las jaulas del camino con estado de ocupación
-     */
     public function getJaulasCamino($nombreEmpleado) {
         try {
             $query = "SELECT 
@@ -78,14 +70,10 @@ class Supervisor {
             
             return $stmt->fetchAll();
         } catch (PDOException $e) {
-            error_log("Error en getJaulasCamino: " . $e->getMessage());
             return [];
         }
     }
 
-    /**
-     * Obtener personal (guardas) del camino
-     */
     public function getPersonalCamino($nombreEmpleado) {
         try {
             $query = "SELECT DISTINCT
@@ -110,40 +98,48 @@ class Supervisor {
             
             return $stmt->fetchAll();
         } catch (PDOException $e) {
-            error_log("Error en getPersonalCamino: " . $e->getMessage());
             return [];
         }
     }
 
     /**
      * Obtener estadísticas detalladas del camino
+     * CORRECCIÓN: Se usa BINARY para evitar error 1267 de Collation
      */
-    public function getEstadisticasCamino($nombreEmpleado) {
+    public function getEstadisticasCamino($caminoId) {
         try {
+            if (!$caminoId) return null;
+
             $query = "SELECT 
-                        COUNT(DISTINCT j.numJaula) AS total_jaulas,
-                        COUNT(DISTINCT CASE WHEN a.numIdentif IS NULL THEN j.numJaula END) AS jaulas_vacias,
-                        COUNT(DISTINCT CASE WHEN a.numIdentif IS NOT NULL THEN j.numJaula END) AS jaulas_ocupadas,
-                        COUNT(DISTINCT a.numIdentif) AS total_animales,
-                        COUNT(DISTINCT g.nombreEmpleado) AS total_guardas,
-                        COUNT(DISTINCT CASE 
-                            WHEN vaa.nivel_alerta = 'CRITICO' THEN a.numIdentif 
-                        END) AS animales_criticos,
-                        SUM(j.tamano) AS capacidad_total
-                      FROM Supervisores s
-                      INNER JOIN Jaulas j ON s.numCamino = j.numCamino
-                      LEFT JOIN Animales a ON j.numJaula = a.numJaula
-                      LEFT JOIN Guardas g ON j.numJaula = g.numJaula
-                      LEFT JOIN VistaAnimalesConAlertas vaa ON a.numIdentif = vaa.numIdentif
-                      WHERE s.nombreEmpleado = :nombreEmpleado";
+                        (SELECT COUNT(*) FROM Jaulas WHERE numCamino = :cid) AS total_jaulas,
+                        (SELECT COUNT(*) FROM Jaulas j 
+                         LEFT JOIN Animales a ON j.numJaula = a.numJaula 
+                         WHERE j.numCamino = :cid AND a.numIdentif IS NULL) AS jaulas_vacias,
+                        (SELECT COUNT(DISTINCT j.numJaula) 
+                         FROM Animales a 
+                         INNER JOIN Jaulas j ON a.numJaula = j.numJaula 
+                         WHERE j.numCamino = :cid) AS jaulas_ocupadas,
+                        (SELECT COUNT(DISTINCT g.nombreEmpleado) 
+                         FROM Guardas g
+                         INNER JOIN Jaulas j ON g.numJaula = j.numJaula 
+                         WHERE j.numCamino = :cid) AS total_guardas,
+                        (SELECT COUNT(DISTINCT a.numIdentif)
+                         FROM Animales a
+                         INNER JOIN Jaulas j ON a.numJaula = j.numJaula
+                         INNER JOIN VistaAnimalesConAlertas vaa ON a.numIdentif = vaa.numIdentif
+                         WHERE j.numCamino = :cid AND BINARY vaa.nivel_alerta = 'CRITICO') AS animales_criticos";
             
             $stmt = $this->conn->prepare($query);
-            $stmt->execute(['nombreEmpleado' => $nombreEmpleado]);
+            $stmt->execute(['cid' => $caminoId]);
             
             return $stmt->fetch();
         } catch (PDOException $e) {
-            error_log("Error en getEstadisticasCamino: " . $e->getMessage());
-            return null;
+            error_log("Error en Estadísticas: " . $e->getMessage());
+            return [
+                'total_jaulas' => 0, 'jaulas_vacias' => 0, 
+                'jaulas_ocupadas' => 0, 'total_guardas' => 0, 
+                'animales_criticos' => 0
+            ];
         }
     }
 
@@ -180,17 +176,12 @@ class Supervisor {
             
             return $jaula;
         } catch (PDOException $e) {
-            error_log("Error en getDetalleJaula: " . $e->getMessage());
             return null;
         }
     }
 
-    /**
-     * Obtener animales de una jaula (Método privado auxiliar)
-     */
     private function getAnimalesJaula($numJaula) {
         try {
-            // CORRECCIÓN: nombre_cientifico
             $query = "SELECT 
                         a.numIdentif,
                         a.nombre AS nombre_animal,
@@ -207,27 +198,28 @@ class Supervisor {
             
             return $stmt->fetchAll();
         } catch (PDOException $e) {
-            error_log("Error en getAnimalesJaula: " . $e->getMessage());
             return [];
         }
     }
 
     /**
      * Obtener resumen de alertas médicas del camino
+     * CORRECCIÓN: Uso de BINARY para compatibilidad de collations
      */
-    public function getAlertasMedicas($nombreEmpleado) {
+    public function getAlertasMedicas($caminoId) {
         try {
+            if (!$caminoId) return [];
+
             $query = "SELECT 
                         vaa.nivel_alerta,
                         COUNT(*) AS total,
                         GROUP_CONCAT(CONCAT(vaa.nombre_animal, ' (', j.nombre, ')') 
                             ORDER BY vaa.nombre_animal 
                             SEPARATOR '; ') AS detalles
-                      FROM Supervisores s
-                      INNER JOIN Jaulas j ON s.numCamino = j.numCamino
+                      FROM Jaulas j
                       INNER JOIN VistaAnimalesConAlertas vaa ON j.numJaula = vaa.numJaula
-                      WHERE s.nombreEmpleado = :nombreEmpleado
-                      AND vaa.nivel_alerta IN ('CRITICO', 'RECIENTE')
+                      WHERE j.numCamino = :cid 
+                      AND BINARY vaa.nivel_alerta IN ('CRITICO', 'RECIENTE')
                       GROUP BY vaa.nivel_alerta
                       ORDER BY 
                         CASE vaa.nivel_alerta
@@ -236,21 +228,17 @@ class Supervisor {
                         END";
             
             $stmt = $this->conn->prepare($query);
-            $stmt->execute(['nombreEmpleado' => $nombreEmpleado]);
+            $stmt->execute(['cid' => $caminoId]);
             
             return $stmt->fetchAll();
         } catch (PDOException $e) {
-            error_log("Error en getAlertasMedicas: " . $e->getMessage());
+            error_log("Error Alertas: " . $e->getMessage());
             return [];
         }
     }
 
-    /**
-     * Obtener distribución de especies en el camino
-     */
     public function getDistribucionEspecies($nombreEmpleado) {
         try {
-            // CORRECCIÓN: nombre_cientifico
             $query = "SELECT 
                         a.nombre_cientifico AS especie,
                         COUNT(*) AS cantidad,
@@ -268,7 +256,6 @@ class Supervisor {
             
             return $stmt->fetchAll();
         } catch (PDOException $e) {
-            error_log("Error en getDistribucionEspecies: " . $e->getMessage());
             return [];
         }
     }
@@ -295,12 +282,16 @@ class Supervisor {
 
     public function generarReporte($nombreEmpleado, $fechaInicio, $fechaFin) {
         try {
+            $caminos = $this->getMisCaminos($nombreEmpleado);
+            $camino = $caminos[0] ?? null;
+            $caminoId = $camino['numCamino'] ?? null;
+
             return [
                 'periodo' => ['inicio' => $fechaInicio, 'fin' => $fechaFin],
-                'camino' => $this->getMiCamino($nombreEmpleado),
-                'estadisticas' => $this->getEstadisticasCamino($nombreEmpleado),
+                'camino' => $camino,
+                'estadisticas' => $this->getEstadisticasCamino($caminoId),
                 'personal' => $this->getPersonalCamino($nombreEmpleado),
-                'alertas' => $this->getAlertasMedicas($nombreEmpleado)
+                'alertas' => $this->getAlertasMedicas($caminoId)
             ];
         } catch (Exception $e) {
             return null;
