@@ -7,7 +7,7 @@
  */
 
 require_once __DIR__ . '/../config/session.php';
-require_once __DIR__ . '/../controllers/AuthController.php';
+require_once __DIR__ . '/../controladores/AuthController.php';
 
 $authController = new AuthController();
 
@@ -17,17 +17,17 @@ if (SessionManager::validateSession()) {
     
     switch ($rol) {
         case 'GUARDA':
-            header('Location: /zoologico/views/guarda/dashboard.php');
+            header('Location: /dawb/ProyectoFinal/vistas/guarda/dashboard.php');
             break;
         case 'SUPERVISOR':
-            header('Location: /zoologico/views/supervisor/dashboard.php');
+            header('Location: /dawb/ProyectoFinal/vistas/supervisor/dashboard.php');
             break;
         case 'ADMIN':
-            header('Location: /zoologico/views/admin/dashboard.php');
+            header('Location: /dawb/ProyectoFinal/vistas/admin/dashboard.php');
             break;
         default:
             SessionManager::logout();
-            header('Location: /zoologico/public/index.php');
+            header('Location: /dawb/ProyectoFinal/public/index.php');
     }
     exit;
 }

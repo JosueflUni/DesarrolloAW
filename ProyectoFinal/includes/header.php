@@ -30,7 +30,7 @@ if (!defined('HEADER_LOADED')) {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="/zoologico/public/css/styles.css">
+    <link rel="stylesheet" href="/dawb/ProyectoFinal/public/css/styles.css">
     
     <style>
         :root {
@@ -81,7 +81,7 @@ if (!defined('HEADER_LOADED')) {
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark navbar-custom mb-4">
         <div class="container-fluid">
-            <a class="navbar-brand" href="/zoologico/public/index.php">
+            <a class="navbar-brand" href="/dawb/ProyectoFinal/public/index.php">
                 <i class="bi bi-house-heart-fill"></i> Sistema Zoológico
             </a>
             
@@ -95,20 +95,20 @@ if (!defined('HEADER_LOADED')) {
                         <?php if ($rolActivo === 'GUARDA'): ?>
                             <li class="nav-item">
                                 <a class="nav-link <?php echo $currentPage === 'dashboard' ? 'active' : ''; ?>" 
-                                   href="/zoologico/views/guarda/dashboard.php">
+                                   href="/dawb/ProyectoFinal/vistas/guarda/dashboard.php">
                                     <i class="bi bi-speedometer2"></i> Mi Dashboard
                                 </a>
                             </li>
                         <?php elseif ($rolActivo === 'SUPERVISOR'): ?>
                             <li class="nav-item">
                                 <a class="nav-link <?php echo $currentPage === 'dashboard' ? 'active' : ''; ?>" 
-                                   href="/zoologico/views/supervisor/dashboard.php">
+                                   href="/dawb/ProyectoFinal/vistas/supervisor/dashboard.php">
                                     <i class="bi bi-speedometer2"></i> Mi Dashboard
                                 </a>
                             </li>
                         <?php elseif ($rolActivo === 'ADMIN'): ?>
                             <li class="nav-item">
-                                <a class="nav-link" href="/zoologico/views/admin/dashboard.php">
+                                <a class="nav-link" href="/dawb/ProyectoFinal/vistas/admin/dashboard.php">
                                     <i class="bi bi-gear"></i> Panel Admin
                                 </a>
                             </li>
@@ -146,7 +146,7 @@ if (!defined('HEADER_LOADED')) {
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <a class="dropdown-item text-danger" 
-                                       href="/zoologico/controllers/AuthController.php?action=logout">
+                                       href="/dawb/ProyectoFinal/controladores/AuthController.php?action=logout">
                                         <i class="bi bi-box-arrow-right"></i> Cerrar Sesión
                                     </a>
                                 </li>

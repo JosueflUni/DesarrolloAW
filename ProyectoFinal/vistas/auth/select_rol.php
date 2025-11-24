@@ -1,8 +1,8 @@
 <?php
-// views/auth/select_rol.php
+// vistas/auth/select_rol.php
 
 if (!isset($_SESSION['temp_usuario'])) {
-    header('Location: /zoologico/public/index.php');
+    header('Location: /dawb/ProyectoFinal/public/index.php');
     exit;
 }
 
@@ -105,7 +105,7 @@ $rolesDisponibles = $roles ?? $usuario['roles_disponibles'];
             </div>
             
             <div class="selector-body">
-                <form method="POST" action="/zoologico/controllers/AuthController.php?action=seleccionar_rol" id="selectorForm">
+                <form method="POST" action="/dawb/ProyectoFinal/controladores/AuthController.php?action=seleccionar_rol" id="selectorForm">
                     <div class="roles-list">
                         <?php foreach ($rolesDisponibles as $rol): ?>
                             <label class="rol-card">
@@ -168,7 +168,7 @@ $rolesDisponibles = $roles ?? $usuario['roles_disponibles'];
                 <hr class="my-4">
 
                 <div class="text-center">
-                    <a href="/zoologico/controllers/AuthController.php?action=logout" class="btn btn-link text-muted">
+                    <a href="/dawb/ProyectoFinal/controladores/AuthController.php?action=logout" class="btn btn-link text-muted">
                         <i class="bi bi-arrow-left"></i> Volver al login
                     </a>
                 </div>

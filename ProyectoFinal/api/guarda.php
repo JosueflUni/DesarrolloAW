@@ -22,15 +22,8 @@ try {
         case 'animales':
             // Obtener animales de una jaula
             $numJaula = $_GET['jaula'] ?? null;
-            
-            if (!$numJaula) {
-                http_response_code(400);
-                echo json_encode(['error' => 'Parámetro jaula requerido']);
-                exit;
-            }
-            
-            $animales = $guardaModel->getAnimalesJaula($numJaula, $nombreEmpleado);
-            echo json_encode($animales);
+            if (!$numJaula) { http_response_code(400); echo json_encode(['error' => 'Falta jaula']); exit; }
+            echo json_encode($guardaModel->getAnimalesJaula($numJaula, $nombreEmpleado));
             break;
 
         case 'detalle':
@@ -81,7 +74,6 @@ try {
             break;
 
         case 'observacion':
-            // Registrar observación (requiere POST)
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                 http_response_code(405);
                 echo json_encode(['error' => 'Método no permitido']);
@@ -89,6 +81,18 @@ try {
             }
             
             $input = json_decode(file_get_contents('php://input'), true);
+            
+            // VALIDACIÓN CSRF PARA API
+            // El cliente debe enviar el header 'X-CSRF-Token'
+            $headers = getallheaders();
+            $token = $headers['X-Csrf-Token'] ?? ($input['csrf_token'] ?? '');
+            
+            if (!SessionManager::verifyCsrfToken($token)) {
+                http_response_code(403);
+                echo json_encode(['error' => 'Token de seguridad inválido']);
+                exit;
+            }
+
             $numIdentif = $input['numIdentif'] ?? null;
             $observacion = $input['observacion'] ?? '';
             
@@ -97,6 +101,8 @@ try {
                 echo json_encode(['error' => 'Datos incompletos']);
                 exit;
             }
+            // Sanitización básica de entrada antes de guardar (aunque PDO ayuda)
+            $observacion = htmlspecialchars(strip_tags($observacion));
             
             $resultado = $guardaModel->registrarObservacion($numIdentif, $nombreEmpleado, $observacion);
             echo json_encode($resultado);
@@ -109,7 +115,8 @@ try {
     }
     
 } catch (Exception $e) {
-    error_log("Error en API Guarda: " . $e->getMessage());
+    error_log("API Error: " . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['error' => 'Error interno del servidor']);
+    echo json_encode(['error' => 'Error interno']);
 }
+?>

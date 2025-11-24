@@ -1,5 +1,5 @@
 <?php
-// controllers/GuardaController.php
+// controladores/GuardaController.php
 
 require_once __DIR__ . '/../config/session.php';
 require_once __DIR__ . '/../models/Guarda.php';
@@ -14,7 +14,7 @@ class GuardaController {
     public function __construct() {
         // Verificar autenticación
         if (!SessionManager::isLoggedIn() || SessionManager::getRol() !== 'GUARDA') {
-            header('Location: /zoologico/public/index.php');
+            header('Location: /dawb/ProyectoFinal/public/index.php');
             exit;
         }
 
@@ -33,7 +33,7 @@ class GuardaController {
             'estadisticas' => $this->guardaModel->getEstadisticas($this->nombreEmpleado)
         ];
 
-        require __DIR__ . '/../views/guarda/dashboard.php';
+        require __DIR__ . '/../vistas/guarda/dashboard.php';
     }
 
     /**

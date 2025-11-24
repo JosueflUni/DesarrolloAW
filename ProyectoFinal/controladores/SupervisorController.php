@@ -1,5 +1,5 @@
 <?php
-// controllers/SupervisorController.php
+// controladores/SupervisorController.php
 
 require_once __DIR__ . '/../config/session.php';
 require_once __DIR__ . '/../models/Supervisor.php';
@@ -14,7 +14,7 @@ class SupervisorController {
     public function __construct() {
         // Verificar autenticación
         if (!SessionManager::isLoggedIn() || SessionManager::getRol() !== 'SUPERVISOR') {
-            header('Location: /zoologico/public/index.php');
+            header('Location: /dawb/ProyectoFinal/public/index.php');
             exit;
         }
 
@@ -37,7 +37,7 @@ class SupervisorController {
             'distribucionEspecies' => $this->supervisorModel->getDistribucionEspecies($this->nombreEmpleado)
         ];
 
-        require __DIR__ . '/../views/supervisor/dashboard.php';
+        require __DIR__ . '/../vistas/supervisor/dashboard.php';
     }
 
     /**

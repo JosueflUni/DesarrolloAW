@@ -3,42 +3,38 @@
 
 /**
  * Configuración de conexión a la base de datos
- * Patrón Singleton para evitar múltiples conexiones
+ * Implementación robusta con variables de entorno
  */
-
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'Zoologico');
-define('DB_USER', 'root'); // Cambiar en producción
-define('DB_PASS', '');     // Cambiar en producción
-define('DB_CHARSET', 'utf8mb4');
 
 class Database {
     private static $instance = null;
     private $conn;
 
-    /**
-     * Constructor privado para implementar Singleton
-     */
     private function __construct() {
+        // Cargar configuración desde variables de entorno o usar valores por defecto seguros
+        $host = getenv('DB_HOST') ?: 'localhost';
+        $db   = getenv('DB_NAME') ?: 'Zoologico';
+        $user = getenv('DB_USER') ?: 'root';
+        $pass = getenv('DB_PASS') ?: '';
+        $charset = 'utf8mb4';
+
         try {
-            $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
+            $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
             $options = [
                 PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES   => false,
-                PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4"
+                PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES $charset"
             ];
 
-            $this->conn = new PDO($dsn, DB_USER, DB_PASS, $options);
+            $this->conn = new PDO($dsn, $user, $pass, $options);
         } catch(PDOException $e) {
-            error_log("Error de conexión: " . $e->getMessage());
-            throw new Exception("Error al conectar con la base de datos");
+            // En producción, no mostrar el mensaje exacto de error de conexión al usuario
+            error_log("Error de conexión BD: " . $e->getMessage());
+            throw new Exception("Error de conexión al sistema de datos.");
         }
     }
 
-    /**
-     * Obtener la instancia única de la base de datos
-     */
     public static function getInstance() {
         if (self::$instance === null) {
             self::$instance = new self();
@@ -46,22 +42,13 @@ class Database {
         return self::$instance;
     }
 
-    /**
-     * Obtener la conexión PDO
-     */
     public function getConnection() {
         return $this->conn;
     }
 
-    /**
-     * Prevenir la clonación del objeto
-     */
     private function __clone() {}
-
-    /**
-     * Prevenir la deserialización del objeto
-     */
     public function __wakeup() {
         throw new Exception("No se puede deserializar un singleton");
     }
 }
+?>

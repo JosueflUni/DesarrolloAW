@@ -1,5 +1,5 @@
 <?php
-// views/supervisor/dashboard.php
+// vistas/supervisor/dashboard.php
 require_once __DIR__ . '/../../config/session.php';
 require_once __DIR__ . '/../../models/Supervisor.php';
 
@@ -145,7 +145,7 @@ $distribucionEspecies = $supervisorModel->getDistribucionEspecies($nombreEmplead
                         </span>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/zoologico/controllers/AuthController.php?action=logout">
+                        <a class="nav-link" href="/dawb/ProyectoFinal/controladores/AuthController.php?action=logout">
                             <i class="bi bi-box-arrow-right"></i> Salir
                         </a>
                     </li>
@@ -470,7 +470,7 @@ $distribucionEspecies = $supervisorModel->getDistribucionEspecies($nombreEmplead
     <script>
         // Ver detalle de jaula
         function verDetalleJaula(numJaula) {
-            fetch(`/zoologico/api/supervisor.php?action=detalle_jaula&jaula=${numJaula}`)
+            fetch(`/dawb/ProyectoFinal/api/supervisor.php?action=detalle_jaula&jaula=${numJaula}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) {

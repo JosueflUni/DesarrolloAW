@@ -21,7 +21,7 @@
                     <h6 class="mb-3">Enlaces Rápidos</h6>
                     <ul class="list-unstyled">
                         <li>
-                            <a href="/zoologico/public/index.php" class="text-muted text-decoration-none">
+                            <a href="/dawb/ProyectoFinal/public/index.php" class="text-muted text-decoration-none">
                                 <i class="bi bi-house"></i> Inicio
                             </a>
                         </li>
@@ -79,7 +79,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <!-- Custom JavaScript -->
-    <script src="/zoologico/public/js/main.js"></script>
+    <script src="/dawb/ProyectoFinal/public/js/main.js"></script>
     
     <script>
         // Auto-cerrar alertas después de 5 segundos

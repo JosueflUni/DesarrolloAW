@@ -94,7 +94,9 @@
                     </div>
                 <?php endif; ?>
 
-                <form method="POST" action="/zoologico/controllers/AuthController.php?action=login" id="loginForm">
+                <form method="POST" action="/dawb/ProyectoFinal/controladores/AuthController.php?action=login" id="loginForm">
+                    <input type="hidden" name="csrf_token" value="<?php echo SessionManager::generateCsrfToken(); ?>">
+    
                     <div class="mb-3">
                         <label for="nombreEmpleado" class="form-label">Usuario</label>
                         <div class="input-group">

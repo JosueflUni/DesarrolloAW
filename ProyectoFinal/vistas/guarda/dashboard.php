@@ -1,5 +1,5 @@
 <?php
-// views/guarda/dashboard.php
+// vistas/guarda/dashboard.php
 require_once __DIR__ . '/../../config/session.php';
 require_once __DIR__ . '/../../models/Guarda.php';
 
@@ -147,7 +147,7 @@ $estadisticas = $guardaModel->getEstadisticas($nombreEmpleado);
                         </span>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/zoologico/controllers/AuthController.php?action=logout">
+                        <a class="nav-link" href="/dawb/ProyectoFinal/controladores/AuthController.php?action=logout">
                             <i class="bi bi-box-arrow-right"></i> Salir
                         </a>
                     </li>
@@ -305,7 +305,7 @@ $estadisticas = $guardaModel->getEstadisticas($nombreEmpleado);
         });
 
         function cargarAnimales(numJaula) {
-            fetch(`/zoologico/api/guarda.php?action=animales&jaula=${numJaula}`)
+            fetch(`/dawb/ProyectoFinal/api/guarda.php?action=animales&jaula=${numJaula}`)
                 .then(response => response.json())
                 .then(data => {
                     const container = document.getElementById(`animales-jaula-${numJaula}`);
@@ -367,7 +367,7 @@ $estadisticas = $guardaModel->getEstadisticas($nombreEmpleado);
             const termino = document.getElementById('searchInput').value.trim();
             if (termino === '') return;
 
-            fetch(`/zoologico/api/guarda.php?action=buscar&q=${encodeURIComponent(termino)}`)
+            fetch(`/dawb/ProyectoFinal/api/guarda.php?action=buscar&q=${encodeURIComponent(termino)}`)
                 .then(response => response.json())
                 .then(data => {
                     const container = document.getElementById('searchResults');
@@ -405,7 +405,7 @@ $estadisticas = $guardaModel->getEstadisticas($nombreEmpleado);
         }
 
         function verDetalle(numIdentif) {
-            fetch(`/zoologico/api/guarda.php?action=detalle&id=${numIdentif}`)
+            fetch(`/dawb/ProyectoFinal/api/guarda.php?action=detalle&id=${numIdentif}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) {
