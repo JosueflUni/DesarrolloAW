@@ -1,18 +1,14 @@
 <?php
-// controladores/SupervisorController.php
+// controladores/SupervisorController.php - VERSIÓN CORREGIDA
 
 require_once __DIR__ . '/../config/session.php';
 require_once __DIR__ . '/../models/Supervisor.php';
 
-/**
- * Controlador para operaciones del Supervisor
- */
 class SupervisorController {
     private $supervisorModel;
     private $nombreEmpleado;
 
     public function __construct() {
-        // Verificar autenticación
         if (!SessionManager::isLoggedIn() || SessionManager::getRol() !== 'SUPERVISOR') {
             header('Location: /dawb/ProyectoFinal/public/index.php');
             exit;
@@ -23,42 +19,40 @@ class SupervisorController {
     }
 
     /**
-     * Mostrar dashboard principal
+     * ⭐ DASHBOARD CORREGIDO
      */
     public function dashboard() {
         // 1. Obtener todos los caminos del supervisor
         $misCaminos = $this->supervisorModel->getMisCaminos($this->nombreEmpleado);
         
-        // 2. Determinar cuál mostrar (URL o el primero)
+        // 2. Determinar cuál camino mostrar
         $caminoSeleccionadoId = $_GET['camino_id'] ?? ($misCaminos[0]['numCamino'] ?? null);
         
-        $caminoActual = null;
+        $miCamino = null;
         if ($misCaminos) {
             foreach ($misCaminos as $c) {
                 if ($c['numCamino'] == $caminoSeleccionadoId) {
-                    $caminoActual = $c;
+                    $miCamino = $c;
                     break;
                 }
             }
-            // Si el ID de la URL no coincide, usar el primero
-            if (!$caminoActual) {
-                $caminoActual = $misCaminos[0];
-                $caminoSeleccionadoId = $caminoActual['numCamino'];
+            if (!$miCamino) {
+                $miCamino = $misCaminos[0];
+                $caminoSeleccionadoId = $miCamino['numCamino'];
             }
         }
 
-        // 3. Obtener datos pasando el ID CORRECTO (Aquí estaba el problema lógico)
-        // Notarás que ahora pasamos $caminoSeleccionadoId en lugar de $this->nombreEmpleado
+        // 3. ⭐ CORRECCIÓN CRÍTICA: Obtener datos del camino ESPECÍFICO seleccionado
         $data = [
             'nombreEmpleado' => $this->nombreEmpleado,
             'nombreCompleto' => SessionManager::getSessionInfo()['nombre_completo'],
             'misCaminos' => $misCaminos,
-            'miCamino' => $caminoActual,
-            'jaulasCamino' => $this->supervisorModel->getJaulasCamino($this->nombreEmpleado), // Este usa nombreEmpleado porque filtra internamente
-            'personalCamino' => $this->supervisorModel->getPersonalCamino($this->nombreEmpleado),
-            'estadisticas' => $this->supervisorModel->getEstadisticasCamino($caminoSeleccionadoId), // <--- CORREGIDO
-            'alertasMedicas' => $this->supervisorModel->getAlertasMedicas($caminoSeleccionadoId),   // <--- CORREGIDO
-            'distribucionEspecies' => $this->supervisorModel->getDistribucionEspecies($this->nombreEmpleado)
+            'miCamino' => $miCamino,
+            'jaulasCamino' => $this->supervisorModel->getJaulasCaminoPorId($caminoSeleccionadoId),
+            'personalCamino' => $this->supervisorModel->getPersonalCaminoPorId($caminoSeleccionadoId),
+            'estadisticas' => $this->supervisorModel->getEstadisticasCamino($caminoSeleccionadoId),
+            'alertasMedicas' => $this->supervisorModel->getAlertasMedicas($caminoSeleccionadoId),
+            'distribucionEspecies' => $this->supervisorModel->getDistribucionEspeciesPorId($caminoSeleccionadoId)
         ];
 
         require __DIR__ . '/../vistas/supervisor/dashboard.php';
@@ -123,7 +117,21 @@ class SupervisorController {
     public function getEstadisticas() {
         header('Content-Type: application/json');
         
-        $estadisticas = $this->supervisorModel->getEstadisticasCamino($this->nombreEmpleado);
+        $caminoId = $_GET['camino_id'] ?? null;
+        
+        if (!$caminoId) {
+            // Obtener el primer camino del supervisor
+            $caminos = $this->supervisorModel->getMisCaminos($this->nombreEmpleado);
+            $caminoId = $caminos[0]['numCamino'] ?? null;
+        }
+        
+        if (!$caminoId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'ID de camino requerido']);
+            return;
+        }
+        
+        $estadisticas = $this->supervisorModel->getEstadisticasCamino($caminoId);
         echo json_encode($estadisticas);
     }
 
@@ -133,7 +141,20 @@ class SupervisorController {
     public function getAlertas() {
         header('Content-Type: application/json');
         
-        $alertas = $this->supervisorModel->getAlertasMedicas($this->nombreEmpleado);
+        $caminoId = $_GET['camino_id'] ?? null;
+        
+        if (!$caminoId) {
+            $caminos = $this->supervisorModel->getMisCaminos($this->nombreEmpleado);
+            $caminoId = $caminos[0]['numCamino'] ?? null;
+        }
+        
+        if (!$caminoId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'ID de camino requerido']);
+            return;
+        }
+        
+        $alertas = $this->supervisorModel->getAlertasMedicas($caminoId);
         echo json_encode($alertas);
     }
 
@@ -210,3 +231,4 @@ if (basename($_SERVER['PHP_SELF']) === 'SupervisorController.php') {
             echo json_encode(['error' => 'Acción no encontrada']);
     }
 }
+?>
