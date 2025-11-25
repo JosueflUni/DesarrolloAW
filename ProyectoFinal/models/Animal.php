@@ -91,7 +91,7 @@ class Animal {
             $query = "INSERT INTO Animales 
                       (numIdentif, nombre, sexo, fechaNac, numJaula, nombre_cientifico, numPais) 
                       VALUES 
-                      (:numIdentif, :nombre, :sexo, :fechaNac, :numJaula, :nombreA, :numPais)";
+                      (:numIdentif, :nombre, :sexo, :fechaNac, :numJaula, :nombre_cientifico, :numPais)";
             
             $stmt = $this->conn->prepare($query);
             $stmt->execute([
@@ -100,7 +100,7 @@ class Animal {
                 'sexo' => $datos['sexo'],
                 'fechaNac' => $datos['fechaNac'],
                 'numJaula' => $datos['numJaula'],
-                'nombreA' => $datos['nombreA'], // Asegúrate que el array de entrada use esta clave o ajústalo
+                'nombre_cientifico' => $datos['nombre_cientifico'], // Asegúrate que el array de entrada use esta clave o ajústalo
                 'numPais' => $datos['numPais']
             ]);
             

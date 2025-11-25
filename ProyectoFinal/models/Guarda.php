@@ -209,26 +209,56 @@ class Guarda {
         }
     }
 
-    public function registrarObservacion($numIdentif, $nombreEmpleado, $observacion) {
+    public function registrarObservacion($numIdentif, $nombreEmpleado, $observacion, $nuevoEstado) {
         try {
-            $query = "SELECT COUNT(*) FROM Animales a
+            $this->conn->beginTransaction();
+
+            // 1. Verificar Acceso
+            $check = "SELECT COUNT(*) FROM Animales a
                       INNER JOIN Guardas g ON a.numJaula = g.numJaula
-                      WHERE a.numIdentif = :numIdentif 
-                      AND g.nombreEmpleado = :nombreEmpleado";
-            
-            $stmt = $this->conn->prepare($query);
-            $stmt->execute([
-                'numIdentif' => $numIdentif,
-                'nombreEmpleado' => $nombreEmpleado
-            ]);
+                      WHERE a.numIdentif = :id AND g.nombreEmpleado = :emp";
+            $stmt = $this->conn->prepare($check);
+            $stmt->execute(['id' => $numIdentif, 'emp' => $nombreEmpleado]);
             
             if ($stmt->fetchColumn() == 0) {
-                return ['error' => 'Acceso denegado'];
+                $this->conn->rollBack();
+                return ['error' => 'Acceso denegado a este animal'];
             }
-            return ['success' => true, 'mensaje' => 'Observación registrada'];
+
+            // 2. Actualizar el Estado del Animal en la tabla principal
+            $updateSql = "UPDATE Animales SET estado = :estado WHERE numIdentif = :id";
+            $this->conn->prepare($updateSql)->execute(['estado' => $nuevoEstado, 'id' => $numIdentif]);
+
+            // 3. Gestión del Historial Médico (Tabla Enfermedades)
+            if ($nuevoEstado === 'SANO') {
+                // Si se marca como SANO, cerramos cualquier enfermedad activa (Ponemos FechaFin = HOY)
+                $closeSql = "UPDATE Enfermedades SET fechaFin = CURDATE() 
+                             WHERE numIdentif = :id AND fechaFin IS NULL";
+                $this->conn->prepare($closeSql)->execute(['id' => $numIdentif]);
+                
+                // Opcional: Insertamos un registro de "Alta médica" o "Revisión"
+                $logSql = "INSERT INTO Enfermedades (numIdentif, fechaInicio, fechaFin, tipoEnfermedad, tratamiento) 
+                           VALUES (:id, CURDATE(), CURDATE(), 'Revisión de Rutina / Alta', :obs)";
+                $this->conn->prepare($logSql)->execute(['id' => $numIdentif, 'obs' => $observacion]);
+
+            } else {
+                // Si está ENFERMO, CRITICO, etc., abrimos un nuevo registro médico
+                $insertSql = "INSERT INTO Enfermedades (numIdentif, fechaInicio, tipoEnfermedad, tratamiento) 
+                              VALUES (:id, CURDATE(), :estado, :obs)";
+                $this->conn->prepare($insertSql)->execute([
+                    'id' => $numIdentif,
+                    'estado' => "Diagnóstico: $nuevoEstado", // Guardamos el estado como "Tipo"
+                    'obs' => $observacion
+                ]);
+            }
+
+            $this->conn->commit();
+            return ['success' => true, 'mensaje' => 'Estado y observación actualizados'];
+
         } catch (PDOException $e) {
+            $this->conn->rollBack();
             error_log("Error en registrarObservacion: " . $e->getMessage());
-            return ['error' => 'Error al registrar observación'];
+            return ['error' => 'Error en base de datos'];
         }
     }
 }

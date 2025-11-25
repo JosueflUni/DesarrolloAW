@@ -74,10 +74,23 @@
                                 </div>
                             <?php endif; ?>
                         </div>
-                        <div class="card-footer bg-transparent">
-                            <button class="btn btn-sm btn-outline-primary w-100" disabled>
+                        <div class="card-footer bg-transparent d-flex gap-2">
+                            <a href="AdminController.php?action=editar_camino&id=<?php echo $c['numCamino']; ?>" 
+                            class="btn btn-sm btn-outline-primary w-50">
                                 <i class="bi bi-pencil"></i> Editar
-                            </button>
+                            </a>
+                            
+                            <?php if ($c['total_jaulas'] == 0): ?>
+                                <a href="AdminController.php?action=eliminar_camino&id=<?php echo $c['numCamino']; ?>" 
+                                class="btn btn-sm btn-outline-danger w-50"
+                                onclick="return confirm('¿Eliminar este camino? Se perderá la asignación.');">
+                                    <i class="bi bi-trash"></i> Borrar
+                                </a>
+                            <?php else: ?>
+                                <button class="btn btn-sm btn-outline-secondary w-50" disabled title="Tiene jaulas asignadas">
+                                    <i class="bi bi-trash"></i> Borrar
+                                </button>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>

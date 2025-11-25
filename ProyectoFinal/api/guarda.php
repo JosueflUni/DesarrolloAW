@@ -95,16 +95,19 @@ try {
 
             $numIdentif = $input['numIdentif'] ?? null;
             $observacion = $input['observacion'] ?? '';
+            $nuevoEstado = $input['estado'] ?? 'SANO'; // NUEVO: Recibir estado, default SANO
             
             if (!$numIdentif || empty($observacion)) {
                 http_response_code(400);
                 echo json_encode(['error' => 'Datos incompletos']);
                 exit;
             }
-            // Sanitización básica de entrada antes de guardar (aunque PDO ayuda)
-            $observacion = htmlspecialchars(strip_tags($observacion));
             
-            $resultado = $guardaModel->registrarObservacion($numIdentif, $nombreEmpleado, $observacion);
+            $observacion = htmlspecialchars(strip_tags($observacion));
+            $nuevoEstado = htmlspecialchars(strip_tags($nuevoEstado)); // Sanitizar estado
+            
+            // Pasamos el 4to parámetro: $nuevoEstado
+            $resultado = $guardaModel->registrarObservacion($numIdentif, $nombreEmpleado, $observacion, $nuevoEstado);
             echo json_encode($resultado);
             break;
 

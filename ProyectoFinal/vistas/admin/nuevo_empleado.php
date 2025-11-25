@@ -1,7 +1,4 @@
-<?php
-// vistas/admin/nuevo_empleado.php - FORMULARIO COMPLETO CON ASIGNACIONES
-require_once __DIR__ . '/../../config/session.php';
-?>
+<?php require_once __DIR__ . '/../../config/session.php'; ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -39,7 +36,6 @@ require_once __DIR__ . '/../../config/session.php';
 
                 <form action="AdminController.php?action=guardar_empleado" method="POST" id="formEmpleado">
                     
-                    <!-- Información Personal -->
                     <div class="form-section">
                         <h5 class="section-title"><i class="bi bi-person"></i> Información Personal</h5>
                         <div class="row">
@@ -55,26 +51,21 @@ require_once __DIR__ . '/../../config/session.php';
                         <div class="mb-3">
                             <label class="form-label">Email</label>
                             <input type="email" name="email" class="form-control">
-                            <div class="form-text">Opcional, para notificaciones del sistema</div>
                         </div>
                     </div>
 
-                    <!-- Credenciales -->
                     <div class="form-section">
-                        <h5 class="section-title"><i class="bi bi-key"></i> Credenciales de Acceso</h5>
+                        <h5 class="section-title"><i class="bi bi-key"></i> Credenciales</h5>
                         <div class="mb-3">
                             <label class="form-label">Nombre de Usuario *</label>
                             <input type="text" name="usuario" class="form-control" required>
-                            <div class="form-text">Será usado para iniciar sesión</div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Contraseña *</label>
                             <input type="password" name="contrasena" class="form-control" required minlength="6">
-                            <div class="form-text">Mínimo 6 caracteres</div>
                         </div>
                     </div>
 
-                    <!-- Rol y Asignaciones -->
                     <div class="form-section">
                         <h5 class="section-title"><i class="bi bi-shield-check"></i> Rol y Asignaciones</h5>
                         <div class="mb-3">
@@ -83,46 +74,34 @@ require_once __DIR__ . '/../../config/session.php';
                                 <option value="">-- Seleccionar --</option>
                                 <option value="GUARDA">Guarda</option>
                                 <option value="SUPERVISOR">Supervisor</option>
+                                <option value="AMBOS">Ambos (Guarda + Supervisor)</option>
                                 <option value="ADMIN">Administrador</option>
                             </select>
                         </div>
 
-                        <!-- Asignación de Jaulas (solo para Guarda) -->
                         <div id="seccionJaulas" style="display:none;">
                             <label class="form-label">Jaulas Asignadas</label>
-                            <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                            <div class="border rounded p-3 bg-white" style="max-height: 300px; overflow-y: auto;">
                                 <?php if (empty($jaulas)): ?>
                                     <p class="text-muted">No hay jaulas disponibles</p>
                                 <?php else: ?>
-                                    <?php 
-                                    $caminoActual = null;
-                                    foreach ($jaulas as $jaula): 
-                                        if ($caminoActual !== $jaula['numCamino']) {
-                                            if ($caminoActual !== null) echo '</div>';
-                                            $caminoActual = $jaula['numCamino'];
-                                            echo '<div class="mb-3">';
-                                            echo '<h6 class="text-primary mb-2"><i class="bi bi-signpost-2"></i> ' . htmlspecialchars($jaula['nombre_camino'] ?? "Camino {$jaula['numCamino']}") . '</h6>';
-                                        }
-                                    ?>
+                                    <?php foreach ($jaulas as $jaula): ?>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" name="jaulas[]" value="<?php echo $jaula['numJaula']; ?>" id="jaula<?php echo $jaula['numJaula']; ?>">
-                                            <label class="form-check-label" for="jaula<?php echo $jaula['numJaula']; ?>">
+                                            <input class="form-check-input" type="checkbox" name="jaulas[]" value="<?php echo $jaula['numJaula']; ?>">
+                                            <label class="form-check-label">
                                                 Jaula #<?php echo $jaula['numJaula']; ?> - <?php echo htmlspecialchars($jaula['nombre'] ?? 'Sin nombre'); ?>
+                                                <small class="text-muted">(<?php echo htmlspecialchars($jaula['nombre_camino'] ?? 'Sin camino'); ?>)</small>
                                             </label>
                                         </div>
-                                    <?php 
-                                    endforeach; 
-                                    if ($caminoActual !== null) echo '</div>';
-                                    ?>
+                                    <?php endforeach; ?>
                                 <?php endif; ?>
                             </div>
                             <div class="form-text mt-2">Selecciona las jaulas que este guarda supervisará</div>
                         </div>
 
-                        <!-- Asignación de Camino (solo para Supervisor) -->
-                        <div id="seccionCamino" style="display:none;">
+                        <div id="seccionCamino" class="mt-3" style="display:none;">
                             <label class="form-label">Camino Asignado</label>
-                            <select name="camino" class="form-select">
+                            <select name="camino" class="form-select bg-white">
                                 <option value="">-- Seleccionar --</option>
                                 <?php foreach ($caminos as $camino): ?>
                                     <option value="<?php echo $camino['numCamino']; ?>">
@@ -133,10 +112,9 @@ require_once __DIR__ . '/../../config/session.php';
                             <div class="form-text">El supervisor tendrá acceso a todas las jaulas de este camino</div>
                         </div>
 
-                        <!-- Info para Admin -->
-                        <div id="seccionAdmin" style="display:none;">
+                        <div id="seccionAdmin" class="mt-3" style="display:none;">
                             <div class="alert alert-info">
-                                <i class="bi bi-info-circle"></i> Los administradores tienen acceso completo al sistema y no requieren asignaciones específicas.
+                                <i class="bi bi-info-circle"></i> Los administradores tienen acceso completo al sistema.
                             </div>
                         </div>
                     </div>
@@ -161,36 +139,47 @@ require_once __DIR__ . '/../../config/session.php';
         document.getElementById('selectRol').addEventListener('change', function() {
             const rol = this.value;
             
-            // Ocultar todas las secciones
-            document.getElementById('seccionJaulas').style.display = 'none';
-            document.getElementById('seccionCamino').style.display = 'none';
-            document.getElementById('seccionAdmin').style.display = 'none';
+            const secJaulas = document.getElementById('seccionJaulas');
+            const secCamino = document.getElementById('seccionCamino');
+            const secAdmin = document.getElementById('seccionAdmin');
             
-            // Mostrar la sección correspondiente
+            // Resetear visibilidad
+            secJaulas.style.display = 'none';
+            secCamino.style.display = 'none';
+            secAdmin.style.display = 'none';
+            
             if (rol === 'GUARDA') {
-                document.getElementById('seccionJaulas').style.display = 'block';
+                secJaulas.style.display = 'block';
             } else if (rol === 'SUPERVISOR') {
-                document.getElementById('seccionCamino').style.display = 'block';
+                secCamino.style.display = 'block';
+            } else if (rol === 'AMBOS') {
+                secJaulas.style.display = 'block';
+                secCamino.style.display = 'block';
             } else if (rol === 'ADMIN') {
-                document.getElementById('seccionAdmin').style.display = 'block';
+                secAdmin.style.display = 'block';
             }
         });
 
-        // Validación antes de enviar
         document.getElementById('formEmpleado').addEventListener('submit', function(e) {
             const rol = document.getElementById('selectRol').value;
             
-            if (rol === 'GUARDA') {
+            // Validación Jaulas
+            if (rol === 'GUARDA' || rol === 'AMBOS') {
                 const jaulasSeleccionadas = document.querySelectorAll('input[name="jaulas[]"]:checked');
                 if (jaulasSeleccionadas.length === 0) {
                     e.preventDefault();
-                    alert('Por favor selecciona al menos una jaula para el guarda');
+                    alert('Debes seleccionar al menos una jaula.');
+                    return;
                 }
-            } else if (rol === 'SUPERVISOR') {
+            }
+            
+            // Validación Camino
+            if (rol === 'SUPERVISOR' || rol === 'AMBOS') {
                 const camino = document.querySelector('select[name="camino"]').value;
                 if (!camino) {
                     e.preventDefault();
-                    alert('Por favor selecciona un camino para el supervisor');
+                    alert('Debes seleccionar un camino.');
+                    return;
                 }
             }
         });

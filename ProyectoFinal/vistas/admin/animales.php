@@ -61,18 +61,31 @@
                                     <td><?php echo htmlspecialchars($a['nombre_jaula'] ?? 'Sin jaula'); ?></td>
                                     <td><?php echo htmlspecialchars($a['nombre_pais'] ?? 'Desconocido'); ?></td>
                                     <td>
-                                        <?php if ($a['nivel_alerta'] === 'CRITICO'): ?>
-                                            <span class="badge bg-danger">Crítico</span>
-                                        <?php elseif ($a['nivel_alerta'] === 'RECIENTE'): ?>
-                                            <span class="badge bg-warning">Atención</span>
-                                        <?php else: ?>
-                                            <span class="badge bg-success">Sano</span>
+                                        <?php
+                                            $estadoReal = strtoupper($a['estado'] ?? '');
+                                            if ($estadoReal === 'SANO'): ?>
+                                                <span class="badge bg-success">Sano</span>
+                                            <?php elseif ($a['nivel_alerta'] === 'CRITICO' || $estadoReal === 'CRITICO'): ?>
+                                                <span class="badge bg-danger">Crítico</span>
+                                            <?php elseif ($a['nivel_alerta'] === 'RECIENTE' || $estadoReal === 'ENFERMO' || $estadoReal === 'CUARENTENA'): ?>
+                                                <span class="badge bg-warning">Atención</span>
+                                            <?php else: ?>
+                                                <span class="badge bg-secondary"><?php echo htmlspecialchars($estadoReal ?: 'Desconocido'); ?></span>
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <button class="btn btn-sm btn-outline-primary" title="Editar">
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
+                                        <div class="btn-group">
+                                            <a href="AdminController.php?action=editar_animal&id=<?php echo $a['numIdentif']; ?>" 
+                                            class="btn btn-sm btn-outline-primary" title="Editar">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <a href="AdminController.php?action=eliminar_animal&id=<?php echo $a['numIdentif']; ?>" 
+                                            class="btn btn-sm btn-outline-danger" 
+                                            onclick="return confirm('¿Eliminar a <?php echo $a['nombre']; ?>? Esta acción no se puede deshacer.');"
+                                            title="Eliminar">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        </div>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>

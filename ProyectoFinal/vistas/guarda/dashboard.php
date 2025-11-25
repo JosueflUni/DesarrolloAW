@@ -19,6 +19,7 @@ $estadisticas = $guardaModel->getEstadisticas($nombreEmpleado);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?php echo SessionManager::generateCsrfToken(); ?>">
     <title>Dashboard Guarda - Zoológico</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
@@ -413,6 +414,7 @@ $estadisticas = $guardaModel->getEstadisticas($nombreEmpleado);
                         return;
                     }
 
+                    // 1. Información General (Igual que antes)
                     let html = `
                         <div class="row">
                             <div class="col-md-6">
@@ -421,56 +423,124 @@ $estadisticas = $guardaModel->getEstadisticas($nombreEmpleado);
                                 <p><strong>Nombre:</strong> ${data.nombre_animal}</p>
                                 <p><strong>Especie:</strong> <em>${data.nombre_cientifico}</em></p>
                                 <p><strong>Sexo:</strong> ${data.sexo}</p>
-                                <p><strong>Fecha de Nacimiento:</strong> ${data.fechaNac || 'Desconocida'}</p>
-                                <p><strong>País de Origen:</strong> ${data.pais_origen || 'Desconocido'}</p>
+                                <p><strong>Nacimiento:</strong> ${data.fechaNac || 'Desconocida'}</p>
                             </div>
                             <div class="col-md-6">
-                                <h6>Ubicación</h6>
+                                <h6>Ubicación y Salud</h6>
                                 <p><strong>Jaula:</strong> #${data.numJaula} - ${data.nombre_jaula || 'Sin nombre'}</p>
                                 <p><strong>Estado:</strong> <span class="badge bg-${data.nivel_alerta === 'SANO' ? 'success' : 'warning'}">${data.nivel_alerta}</span></p>
                             </div>
                         </div>
                     `;
 
+                    // 2. NUEVO: Formulario para agregar observación
+                    html += `
+                        <hr>
+                        <div class="bg-light p-3 rounded border">
+                            <h6 class="text-primary"><i class="bi bi-clipboard-pulse"></i> Actualizar Estado de Salud</h6>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">Nuevo Estado:</label>
+                                    <select id="selectEstado" class="form-select form-select-sm">
+                                        <option value="SANO">🟢 Sano / Recuperado</option>
+                                        <option value="ENFERMO">🔴 Enfermo</option>
+                                        <option value="CRITICO">🆘 Crítico</option>
+                                        <option value="CUARENTENA">⚠️ En Cuarentena</option>
+                                        <option value="OBSERVACION">👀 En Observación</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label small fw-bold">Detalles / Diagnóstico:</label>
+                                <textarea id="txtObservacion" class="form-control" rows="2" placeholder="Describa los síntomas, tratamiento aplicado o motivo del alta..."></textarea>
+                            </div>
+                            
+                            <div class="text-end">
+                                <button class="btn btn-success btn-sm" onclick="guardarObservacion('${data.numIdentif}')">
+                                    <i class="bi bi-save"></i> Registrar Actualización
+                                </button>
+                            </div>
+                        </div>
+                    `;
+
+                    // 3. Historial Médico (Igual que antes)
                     if (data.historial_medico && data.historial_medico.length > 0) {
                         html += `
                             <hr>
-                            <h6>Historial Médico</h6>
+                            <h6>Historial Reciente</h6>
                             <div class="table-responsive">
-                                <table class="table table-sm">
+                                <table class="table table-sm table-striped">
                                     <thead>
                                         <tr>
-                                            <th>Fecha Inicio</th>
+                                            <th>Fecha</th>
                                             <th>Tipo</th>
                                             <th>Estado</th>
-                                            <th>Duración</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                         `;
-                        
                         data.historial_medico.forEach(registro => {
                             html += `
                                 <tr>
                                     <td>${registro.fechaInicio}</td>
-                                    <td>${registro.tipoEnfermedad}</td>
+                                    <td>${registro.tipoEnfermedad || registro.tratamiento}</td>
                                     <td><span class="badge bg-${registro.estado === 'ACTIVA' ? 'danger' : 'success'}">${registro.estado}</span></td>
-                                    <td>${registro.dias_duracion} días</td>
                                 </tr>
                             `;
                         });
-                        
-                        html += `
-                                    </tbody>
-                                </table>
-                            </div>
-                        `;
+                        html += `</tbody></table></div>`;
                     }
 
                     document.getElementById('modalContent').innerHTML = html;
                     new bootstrap.Modal(document.getElementById('detalleAnimalModal')).show();
                 })
                 .catch(error => console.error('Error:', error));
+        }
+
+        // --- NUEVA FUNCIÓN PARA GUARDAR ---
+        function guardarObservacion(numIdentif) {
+            const observacion = document.getElementById('txtObservacion').value.trim();
+            const nuevoEstado = document.getElementById('selectEstado').value; // NUEVO: Capturar estado
+            
+            if (!observacion) {
+                alert('Por favor escribe una observación o diagnóstico.');
+                return;
+            }
+
+            if(!confirm(`¿Confirmar cambio de estado a "${nuevoEstado}"?`)) return;
+
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+            const datos = {
+                numIdentif: numIdentif,
+                observacion: observacion,
+                estado: nuevoEstado, // NUEVO: Enviar estado
+                csrf_token: csrfToken
+            };
+
+            fetch('/dawb/ProyectoFinal/api/guarda.php?action=observacion', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify(datos)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Estado de salud actualizado correctamente.');
+                    location.reload(); 
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudo guardar'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error de conexión con el servidor');
+            });
         }
     </script>
 </body>

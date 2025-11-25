@@ -50,29 +50,36 @@
                                 <?php foreach ($jaulas as $j): ?>
                                 <tr>
                                     <td><strong>#<?php echo $j['numJaula']; ?></strong></td>
-                                    <td><?php echo htmlspecialchars($j['nombre'] ?: 'Sin nombre'); ?></td>
+                                    <td><?php echo htmlspecialchars($j['nombre_jaula'] ?? $j['nombre'] ?? 'Sin nombre'); ?></td>
                                     <td><?php echo $j['tamano']; ?> m²</td>
+                                    <td><?php echo htmlspecialchars($j['nombre_camino'] ?? 'Sin camino'); ?></td>
                                     <td>
-                                        <small class="text-muted">
-                                            <?php echo htmlspecialchars($j['nombre_camino'] ?: 'Sin camino'); ?>
-                                        </small>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-<?php echo $j['total_animales'] > 0 ? 'success' : 'secondary'; ?>">
-                                            <?php echo $j['total_animales']; ?>
+                                        <span class="badge bg-<?php echo ($j['total_animales'] ?? 0) > 0 ? 'success' : 'secondary'; ?>">
+                                            <?php echo $j['total_animales'] ?? 0; ?>
                                         </span>
                                     </td>
                                     <td>
-                                        <?php if ($j['guardas']): ?>
-                                            <small><?php echo htmlspecialchars($j['guardas']); ?></small>
-                                        <?php else: ?>
-                                            <small class="text-muted">Sin asignar</small>
-                                        <?php endif; ?>
+                                        <small><?php echo htmlspecialchars($j['guardas'] ?? $j['guardas_asignados'] ?? 'Sin asignar'); ?></small>
                                     </td>
                                     <td>
-                                        <button class="btn btn-sm btn-outline-primary" disabled>
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
+                                        <div class="btn-group">
+                                            <a href="AdminController.php?action=editar_jaula&id=<?php echo $j['numJaula']; ?>" 
+                                            class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            
+                                            <?php if (($j['total_animales'] ?? 0) == 0): ?>
+                                                <a href="AdminController.php?action=eliminar_jaula&id=<?php echo $j['numJaula']; ?>" 
+                                                class="btn btn-sm btn-outline-danger"
+                                                onclick="return confirm('¿Eliminar esta jaula permanentemente?');">
+                                                    <i class="bi bi-trash"></i>
+                                                </a>
+                                            <?php else: ?>
+                                                <button class="btn btn-sm btn-outline-secondary" disabled title="Vacíe la jaula antes de eliminar">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            <?php endif; ?>
+                                        </div>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
